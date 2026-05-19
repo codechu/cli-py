@@ -158,6 +158,46 @@ SPINNER_STYLES: dict[str, list[str]] = {
         "·· ··   ", "·✦ ·· · ", "·✦·✦·✦·✦", "·  ✦  · ",
         "        ", "   ·    ",
     ],
+
+    # --- Random-access patterns ----------------------------------------
+    # Single entity teleporting between positions — no spatial coherence.
+    # This is the *seek* fingerprint: each frame's position is unrelated
+    # to the last. Distinct from chaos (dense+unpredictable); random
+    # access is sparse+unpredictable in position.
+
+    # scatter: single dot teleports to random positions in an 8-cell row
+    "scatter": [
+        "●       ", "      ●  ", "  ●      ", "        ●",
+        "   ●     ", " ●       ", "       ● ", "    ●    ",
+    ],
+    # multi-seek: 2-3 simultaneous reads at uncorrelated positions
+    "multi-seek": [
+        "●  ●     ", "     ● ● ", "  ●   ●  ", "●     ●  ",
+        " ● ● ●   ", "   ●  ● ●", "● ●    ● ", " ●  ●  ● ",
+    ],
+    # disk-thrash: wider hashes at random spots — HDD head movement feel
+    "disk-thrash": [
+        "━━       ", "     ━━━ ", " ━━      ", "      ━━━",
+        "━     ━━ ", "   ━━━  ━", "━━     ━━", " ━━━ ━   ",
+    ],
+    # hash-spray: sparse decorrelated dots — hash output / cache misses
+    "hash-spray": [
+        "·  ·  · ", "    ·   ", "  ·    ·", "·       ",
+        "   ·  · ", "·    ·  ", " ·    · ", "  ·  ·  ",
+    ],
+    # rand-walk: single point doing brownian-ish motion (no teleport,
+    # small unpredictable steps) — distinct from scatter's hard jumps
+    "rand-walk": [
+        "  ●   ", "   ●  ", "  ●   ", " ●    ",
+        "  ●   ", "   ●  ", "    ● ", "   ●  ",
+        "  ●   ", " ●    ",
+    ],
+    # gather: scattered dots converge to center, scatter again — like
+    # random reads consolidating, then dispersing
+    "gather": [
+        "●     ●●", " ●   ●● ", "  ● ●●  ", "  ●●●   ",
+        "   ●●   ", "  ● ●   ", " ●   ●  ", "●     ●●",
+    ],
 }
 
 DEFAULT_SPINNER_STYLE = "dots"
