@@ -5,6 +5,7 @@ Public API re-exports. See module docstrings for details.
 
 from __future__ import annotations
 
+from . import emoji
 from .banner import LOGOS, ascii_banner, banner
 from .color import Color
 from .emoji import capabilities, e
@@ -26,6 +27,7 @@ __all__ = [
     "capabilities",
     "confirm",
     "e",
+    "emoji",
     "format_examples",
     "multiselect",
     "prompt",

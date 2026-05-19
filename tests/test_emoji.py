@@ -85,3 +85,55 @@ def test_e_unknown_name_raises(monkeypatch):
     monkeypatch.setenv("CODECHU_CLI_EMOJI", "always")
     with pytest.raises(KeyError):
         e("nope")
+
+
+def test_register_adds_glyph(monkeypatch):
+    from codechu_cli import emoji as _emoji
+
+    monkeypatch.setenv("CODECHU_CLI_EMOJI", "always")
+    _emoji.register("snap", "📦", "snap")
+    try:
+        assert e("snap") == "📦"
+        monkeypatch.setenv("CODECHU_CLI_EMOJI", "never")
+        assert e("snap") == "snap"
+    finally:
+        # cleanup so other tests don't see this glyph
+        _emoji._GLYPHS.pop("snap", None)
+
+
+def test_register_overrides_existing(monkeypatch):
+    from codechu_cli import emoji as _emoji
+
+    original = _emoji._GLYPHS["ok"]
+    monkeypatch.setenv("CODECHU_CLI_EMOJI", "always")
+    _emoji.register("ok", "Y", "y")
+    try:
+        assert e("ok") == "Y"
+    finally:
+        _emoji._GLYPHS["ok"] = original
+
+
+def test_update_bulk(monkeypatch):
+    from codechu_cli import emoji as _emoji
+
+    monkeypatch.setenv("CODECHU_CLI_EMOJI", "always")
+    _emoji.update({
+        "rocket": ("🚀", "^"),
+        "star": ("⭐", "*"),
+    })
+    try:
+        assert e("rocket") == "🚀"
+        assert e("star") == "⭐"
+    finally:
+        _emoji._GLYPHS.pop("rocket", None)
+        _emoji._GLYPHS.pop("star", None)
+
+
+def test_known_lists_registered_names():
+    from codechu_cli import emoji as _emoji
+
+    names = _emoji.known()
+    assert isinstance(names, list)
+    # The built-in defaults should always be in there.
+    assert "ok" in names
+    assert "fail" in names

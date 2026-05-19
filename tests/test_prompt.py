@@ -128,3 +128,81 @@ def test_multiselect_fallback_parses_indices():
 
 def test_multiselect_empty_choices_returns_empty():
     assert multiselect("x", []) == []
+
+
+def test_confirm_custom_yes_no_chars_turkish():
+    # "e" / "h" + full words "evet" / "hayır"
+    s = TTYStringIO()
+    assert confirm(
+        "Devam?",
+        stream=s,
+        in_stream=io.StringIO("e\n"),
+        yes_chars=("e", "evet"),
+        no_chars=("h", "hayır"),
+    ) is True
+    s2 = TTYStringIO()
+    assert confirm(
+        "Devam?",
+        stream=s2,
+        in_stream=io.StringIO("hayır\n"),
+        yes_chars=("e", "evet"),
+        no_chars=("h", "hayır"),
+    ) is False
+
+
+def test_confirm_custom_suffix_format_renders():
+    s = TTYStringIO()
+    confirm(
+        "Tamam mı?",
+        stream=s,
+        in_stream=io.StringIO("e\n"),
+        yes_chars=("e", "evet"),
+        no_chars=("h", "hayır"),
+        suffix_format="({yes}/{no})",
+    )
+    out = s.getvalue()
+    assert "(e/H)" in out  # default=False uppercases no
+
+
+def test_confirm_translate_wraps_suffix():
+    s = TTYStringIO()
+    seen: list[str] = []
+
+    def fake_t(msg: str) -> str:
+        seen.append(msg)
+        return msg.upper()
+
+    confirm(
+        "ok?",
+        stream=s,
+        in_stream=io.StringIO("y\n"),
+        translate=fake_t,
+    )
+    out = s.getvalue()
+    # Translator was called with the suffix template before formatting? No —
+    # we wrap the formatted suffix. Verify it ran on the suffix string.
+    assert any("[" in m and "]" in m for m in seen)
+    # The translated (uppercased) suffix lands in output.
+    assert "[Y/N]" in out
+
+
+def test_prompt_translate_wraps_validator_error():
+    s = TTYStringIO()
+
+    def v(x: str) -> None:
+        if not x.isdigit():
+            raise ValueError("must be number")
+
+    # Translator that prefixes [tr] so we can see it landed
+    def t(msg: str) -> str:
+        return "[tr] " + msg
+
+    out = prompt(
+        "n",
+        validate=v,
+        stream=s,
+        in_stream=io.StringIO("abc\n42\n"),
+        translate=t,
+    )
+    assert out == "42"
+    assert "[tr] Invalid input: must be number" in s.getvalue()

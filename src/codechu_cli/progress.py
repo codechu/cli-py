@@ -58,12 +58,32 @@ class ProgressLine:
         self._last_width = 0
 
 
+def _fmt_duration(seconds: float) -> str:
+    """Render a duration as ``Xs`` or ``Xm Ys`` (rounded to whole seconds)."""
+    if seconds < 0 or seconds != seconds:  # NaN guard
+        return "?"
+    s = int(round(seconds))
+    if s < 60:
+        return f"{s}s"
+    m, rem = divmod(s, 60)
+    return f"{m}m {rem}s"
+
+
 class ProgressBar:
     """Bracketed progress bar with percent + count.
 
     Renders ``[###----] 30% · 3/10 · label`` to ``stream`` (default
     ``sys.stderr``). All methods are no-ops when ``enabled`` is False.
+
+    Customize the look with ``fill``, ``empty``, and ``template``. The
+    template gets these fields: ``{bar} {pct} {current} {total} {label}
+    {elapsed} {eta}``. ``{elapsed}`` and ``{eta}`` are formatted via
+    :func:`_fmt_duration` (``Xs`` or ``Xm Ys``). ``{eta}`` shows ``?``
+    until at least one :meth:`advance` lands with a positive total and
+    nonzero current.
     """
+
+    DEFAULT_TEMPLATE = "[{bar}] {pct}% · {current}/{total} · {label}"
 
     def __init__(
         self,
@@ -71,16 +91,23 @@ class ProgressBar:
         *,
         stream: IO[str] | None = None,
         width: int = 40,
+        fill: str = "#",
+        empty: str = "-",
+        template: str | None = None,
         enabled: bool | None = None,
     ) -> None:
         self._stream = stream if stream is not None else sys.stderr
         self.width = max(4, width)
         self.total = max(0, int(total))
         self.current = 0
+        self.fill = fill
+        self.empty = empty
+        self.template = template if template is not None else self.DEFAULT_TEMPLATE
         if enabled is None:
             enabled = _stream_is_tty(self._stream)
         self.enabled = enabled
         self._line = ProgressLine(self._stream, enabled=self.enabled)
+        self._t_start = time.monotonic()
 
     def set_total(self, n: int) -> None:
         self.total = max(0, int(n))
@@ -96,11 +123,30 @@ class ProgressBar:
         total = self.total or 1
         ratio = min(1.0, self.current / total) if total else 0.0
         filled = int(round(ratio * self.width))
-        bar = "#" * filled + "─" * (self.width - filled)
+        # Repeat fill/empty strings; clamp if a multi-char glyph would
+        # overflow due to int rounding edges.
+        bar_str = (self.fill * filled) + (self.empty * (self.width - filled))
         pct = int(round(ratio * 100))
-        msg = f"[{bar}] {pct}% · {self.current}/{self.total}"
-        if label:
-            msg += f" · {label}"
+        elapsed = time.monotonic() - self._t_start
+        if self.total > 0 and self.current > 0:
+            eta_s = elapsed * (self.total - self.current) / self.current
+            eta_str = _fmt_duration(max(0.0, eta_s))
+        else:
+            eta_str = "?"
+        msg = self.template.format(
+            bar=bar_str,
+            pct=pct,
+            current=self.current,
+            total=self.total,
+            label=label,
+            elapsed=_fmt_duration(elapsed),
+            eta=eta_str,
+        )
+        # Trim trailing " · " when the default template ran with an
+        # empty label, matching prior behavior.
+        if self.template is self.DEFAULT_TEMPLATE or self.template == self.DEFAULT_TEMPLATE:
+            if not label and msg.endswith(" · "):
+                msg = msg[:-3]
         self._line.update(msg)
 
     def finish(self) -> None:

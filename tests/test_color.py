@@ -46,3 +46,38 @@ def test_isatty_raises_is_treated_as_non_tty():
 
     c = Color(Broken())
     assert c.enabled is False
+
+
+def test_custom_palette_extends_defaults(monkeypatch):
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    c = Color(TTYStringIO(), palette={"snap-edge": "\033[35m"})
+    out = c("snap-edge", "edge")
+    assert out.startswith("\033[35m")
+    assert out.endswith("\033[0m")
+    # Defaults still present
+    assert c("low", "ok").startswith("\033[32m")
+
+
+def test_custom_palette_overrides_default(monkeypatch):
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    c = Color(TTYStringIO(), palette={"low": "\033[95m"})
+    assert c("low", "x").startswith("\033[95m")
+
+
+def test_force_true_overrides_no_color(monkeypatch):
+    monkeypatch.setenv("NO_COLOR", "1")
+    c = Color(io.StringIO(), force=True)
+    assert c.enabled is True
+    assert c("low", "ok").startswith("\033[32m")
+
+
+def test_force_false_disables_on_tty(monkeypatch):
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    c = Color(TTYStringIO(), force=False)
+    assert c.enabled is False
+    assert c("low", "ok") == "ok"
+
+
+def test_palette_alias_backwards_compat():
+    # Old callers may still touch Color.PALETTE — keep it as an alias.
+    assert Color.PALETTE is Color.DEFAULT_PALETTE

@@ -86,4 +86,25 @@ def e(name: str, *, fallback: str | None = None, stream: IO[str] | None = None) 
     return glyph if "emoji" in capabilities(stream) else fb
 
 
-__all__ = ["capabilities", "e"]
+def register(name: str, glyph: str, fallback: str) -> None:
+    """Add or override a glyph in the registry.
+
+    ``glyph`` is the unicode form, ``fallback`` is the ASCII form used
+    when the terminal lacks emoji capability.
+    """
+    _GLYPHS[name] = (glyph, fallback)
+
+
+def update(mapping: dict[str, tuple[str, str]]) -> None:
+    """Bulk register glyphs. Each value is ``(unicode, fallback)``."""
+    for name, pair in mapping.items():
+        glyph, fallback = pair
+        _GLYPHS[name] = (glyph, fallback)
+
+
+def known() -> list[str]:
+    """Return the list of registered glyph names."""
+    return list(_GLYPHS.keys())
+
+
+__all__ = ["capabilities", "e", "known", "register", "update"]

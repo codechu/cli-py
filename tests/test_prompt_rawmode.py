@@ -221,3 +221,75 @@ def test_read_key_unknown_arrow():
 def test_raw_mode_available_false_when_no_termios(monkeypatch):
     monkeypatch.setattr(prompt_mod, "_HAS_TERMIOS", False)
     assert prompt_mod._raw_mode_available(TTYStringIO(), FakeTTYIn("")) is False
+
+
+def test_select_rawmode_translated_hint(stub_termios):
+    fd = _devnull_fd()
+    out = TTYStringIO()
+    try:
+        select(
+            "Pick",
+            ["a", "b"],
+            stream=out,
+            in_stream=FakeTTYIn("\n", fd=fd),
+            translate=lambda s: "TR:" + s,
+        )
+    finally:
+        os.close(fd)
+    assert "TR:Use" in out.getvalue()
+
+
+def test_multiselect_rawmode_translated_hint(stub_termios):
+    fd = _devnull_fd()
+    out = TTYStringIO()
+    try:
+        multiselect(
+            "Pick",
+            ["a", "b"],
+            stream=out,
+            in_stream=FakeTTYIn("\n", fd=fd),
+            translate=lambda s: "TR:" + s,
+        )
+    finally:
+        os.close(fd)
+    assert "TR:Use space" in out.getvalue()
+
+
+def test_select_rawmode_custom_keymap(stub_termios):
+    """Custom keymap: use 'n'/'p' instead of j/k for next/prev."""
+    fd = _devnull_fd()
+    try:
+        # 'n' = down, 'n' = down, enter → cursor 2
+        result = select(
+            "Pick",
+            ["a", "b", "c"],
+            stream=TTYStringIO(),
+            in_stream=FakeTTYIn("nn\n", fd=fd),
+            keymap={"down": ("n",), "up": ("p",)},
+        )
+    finally:
+        os.close(fd)
+    assert result == "c"
+
+
+def test_select_fallback_translated_choice_label():
+    """Non-TTY in_stream forces the numbered fallback; translator wraps
+    the 'Enter your choice (1-N)' message it prints."""
+    s = TTYStringIO()
+    seen: list[str] = []
+
+    def t(msg: str) -> str:
+        seen.append(msg)
+        return "[X] " + msg
+
+    result = prompt_mod.select(
+        "Pick",
+        ["a", "b", "c"],
+        stream=s,
+        in_stream=io.StringIO("2\n"),
+        translate=t,
+    )
+    assert result == "b"
+    # The "Enter your choice (1-3)" template was passed through translate.
+    assert any("Enter your choice" in m for m in seen)
+    assert "[X] Enter your choice (1-3)" in s.getvalue()

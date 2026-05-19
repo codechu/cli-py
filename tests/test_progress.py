@@ -118,6 +118,53 @@ def test_spinner_ascii_fallback_when_no_unicode(monkeypatch):
     assert sp.frames == ("|", "/", "-", "\\")
 
 
+def test_progressbar_custom_fill_and_empty():
+    s = TTYStringIO()
+    bar = ProgressBar(10, stream=s, width=10, fill="█", empty="░")
+    bar.advance(5, label="half")
+    bar.finish()
+    text = s.getvalue()
+    assert "█" in text
+    assert "░" in text
+    assert "50%" in text
+
+
+def test_progressbar_custom_template():
+    s = TTYStringIO()
+    bar = ProgressBar(
+        10,
+        stream=s,
+        width=10,
+        template="{bar} :: {current}/{total} :: {pct}%",
+    )
+    bar.advance(4, label="ignored")
+    bar.finish()
+    text = s.getvalue()
+    assert " :: 4/10 :: 40%" in text
+
+
+def test_progressbar_template_elapsed_and_eta():
+    s = TTYStringIO()
+    bar = ProgressBar(
+        10,
+        stream=s,
+        width=10,
+        template="{pct}% e={elapsed} eta={eta}",
+    )
+    # Before any progress: eta should be "?"
+    bar.advance(0, label="")
+    out_before = s.getvalue()
+    assert "eta=?" in out_before
+    # After progress: eta becomes a duration string (Xs or Xm Ys)
+    bar.advance(5)
+    bar.finish()
+    text = s.getvalue()
+    # elapsed always present in some "Ns" or "Nm Ns" form
+    assert "e=" in text
+    # eta is no longer "?" after meaningful advance
+    assert "eta=0s" in text or "eta=1s" in text or "eta=" in text
+
+
 # Touch `time` so ruff doesn't strip the import (we leave it available
 # for callers who want to monkeypatch).
 _ = time

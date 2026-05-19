@@ -20,3 +20,9 @@
 - `resolve_format()` — TTY vs pipe default format chooser
 - `format_examples()` — argparse epilog formatter
 - `emoji.capabilities()` + `emoji.e()` — locale + terminal-aware glyph lookup
+- `Color`: `palette=` merge + `force=` override
+- `ProgressBar`: `fill`, `empty`, `template`, `{elapsed}`, `{eta}` template fields
+- `confirm()`: `yes_chars`, `no_chars`, `suffix_format`, `translate`
+- `prompt()`: `translate`
+- `select()` / `multiselect()`: `keymap=`, `translate=`
+- `emoji.register()`, `emoji.update()`, `emoji.known()` — runtime glyph extension

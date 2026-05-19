@@ -1,4 +1,11 @@
-"""Banner headers — single-line and ASCII-art variants."""
+"""Banner headers — single-line + raw multi-line ASCII art.
+
+Text-to-art generation (rendering a plain string like "DISK" as a
+multi-line glyph block using a font) is deliberately NOT in this
+library. Typography is a separate concern; future plugin libraries
+under the ``codechu-glyph-*`` namespace will own that. See the
+project README's "Out of scope" section.
+"""
 
 from __future__ import annotations
 
@@ -67,13 +74,14 @@ def ascii_banner(
 ) -> None:
     """Print a multi-line ASCII-art banner to ``stream``.
 
+    ``art`` is raw multi-line art — pass either your own string or a
+    value from :data:`LOGOS`. Text-to-art generation (e.g. rendering
+    "DISK" as block glyphs) is out of scope for this library; future
+    ``codechu-glyph-*`` plugin libraries will own that.
+
     By default the banner only renders when ``stream`` is a TTY — pipes
     and redirected output get no visual noise. Pass ``enabled=True`` to
     force the output (useful in CI logs that capture stderr).
-
-    ``art`` may be a raw multi-line string (your own art) or a value
-    looked up via :data:`LOGOS` — pass the dict value directly, e.g.
-    ``ascii_banner(LOGOS["codechu"], color="info")``.
 
     ``color`` is a key from the :class:`Color` palette
     (``"info"``, ``"low"``, ``"dim"``, …). When color support is off

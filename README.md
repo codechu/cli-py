@@ -141,6 +141,86 @@ print(f"{e('arrow')} next step")    # "→ next step" or "-> next step"
 | `capabilities(stream=None)` | set of `{"unicode", "color", "emoji"}` |
 | `e(name, *, fallback=None)` | glyph lookup with ASCII fallback |
 
+## Extension points
+
+The library is opinionated about defaults but accepts customization at
+every visible surface, so apps don't need to subclass to fit their
+brand or locale.
+
+```python
+# Custom palette (merged onto defaults)
+c = Color(sys.stdout, palette={
+    "snap-edge":   "\033[35m",
+    "snap-stable": "\033[36m",
+})
+print(c("snap-edge", "edge channel"))
+
+# Force color on/off (override NO_COLOR + TTY detection)
+c = Color(sys.stdout, force=True)
+
+# Custom progress bar look
+bar = ProgressBar(100, fill="█", empty="░",
+                  template="{bar} {pct}% · {elapsed} · ETA {eta}")
+for _ in range(100):
+    bar.advance(label="working…")
+bar.finish()
+
+# Turkish confirm
+from gettext import gettext as _
+confirm("Devam edilsin mi?",
+        yes_chars=("e", "evet"),
+        no_chars=("h", "hayır"),
+        translate=_)
+
+# Register custom emoji
+from codechu_cli import emoji
+emoji.register("snap", "📦", "snap")
+print(emoji.e("snap"))    # 📦 or "snap" depending on capabilities
+
+# vi-only keymap for select
+select("Pick branch", branches,
+       keymap={"up": ("k",), "down": ("j",)})
+```
+
+### Raw ASCII-art banners
+
+`ascii_banner(art, ...)` prints a multi-line ASCII-art string with
+optional color. Text-to-art generation (rendering a plain string like
+`"DISK"` as multi-line glyph blocks via a font) is out of scope for
+this library — that's a typography problem with its own quality
+trade-offs. Future plugin libraries under the `codechu-glyph-*`
+namespace will own that, depending on `codechu-cli` for the rendering
+plumbing.
+
+For now: bring your own art, or pick from the `LOGOS` registry:
+
+```python
+from codechu_cli import LOGOS, ascii_banner
+
+ascii_banner(LOGOS["codechu"], color="info")
+ascii_banner(my_own_art_string, color="dim")
+```
+
+## Internationalization
+
+The library ships English defaults and does **not** bundle gettext / .po
+files — that's an application concern. For the handful of strings it
+emits autonomously (the select / multiselect hint line, the confirm
+suffix, the prompt validator error, the numbered-fallback "Enter your
+choice"), inject a translator callable:
+
+```python
+from gettext import gettext as _
+
+confirm("Devam edilsin mi?", translate=_)
+select("Bir seçin", choices, translate=_)
+multiselect("Hedefler", targets, translate=_)
+prompt("Yedek adı", validate=v, translate=_)
+```
+
+This follows the STANDARDS.md §11 library carve-out: libraries accept a
+translator hook rather than shipping their own catalog.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

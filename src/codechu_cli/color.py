@@ -13,9 +13,13 @@ class Color:
 
         c = Color(sys.stdout)
         c("low", "ok")   # → "\\x1b[32mok\\x1b[0m" if color enabled, else "ok"
+
+    Pass ``palette={...}`` to merge custom codes onto :attr:`DEFAULT_PALETTE`.
+    Pass ``force=True`` / ``force=False`` to override TTY / NO_COLOR auto-detection.
+    Unknown codes pass the text through unchanged.
     """
 
-    PALETTE: dict[str, str] = {
+    DEFAULT_PALETTE: dict[str, str] = {
         "reset": "\033[0m",
         "dim": "\033[2m",
         "bold": "\033[1m",
@@ -25,11 +29,25 @@ class Color:
         "info": "\033[36m",     # cyan
     }
 
-    def __init__(self, stream: IO[str]) -> None:
+    # Backwards-compat alias — old callers used Color.PALETTE.
+    PALETTE = DEFAULT_PALETTE
+
+    def __init__(
+        self,
+        stream: IO[str],
+        *,
+        palette: dict[str, str] | None = None,
+        force: bool | None = None,
+    ) -> None:
+        # Merge: custom palette overrides + extends defaults.
+        self._palette = {**self.DEFAULT_PALETTE, **(palette or {})}
         self._stream = stream
+        self._force = force  # None = auto-detect
 
     @property
     def enabled(self) -> bool:
+        if self._force is not None:
+            return self._force
         if os.environ.get("NO_COLOR"):
             return False
         isatty = getattr(self._stream, "isatty", None)
@@ -41,10 +59,11 @@ class Color:
     def __call__(self, code: str, text: str) -> str:
         if not self.enabled:
             return text
-        seq = self.PALETTE.get(code)
+        seq = self._palette.get(code)
         if seq is None:
             return text
-        return f"{seq}{text}{self.PALETTE['reset']}"
+        reset = self._palette.get("reset", self.DEFAULT_PALETTE["reset"])
+        return f"{seq}{text}{reset}"
 
 
 __all__ = ["Color"]
