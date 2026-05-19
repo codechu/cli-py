@@ -227,6 +227,50 @@ SPINNER_STYLES: dict[str, list[str]] = {
     "matrix-trail": [
         "▔", "▀", "█", "▆", "▄", "▂", "▁", " ",
     ],
+
+    # --- Quadrant-block grids ------------------------------------------
+    # Single CLI row, but each cell renders as a 2x2 sub-grid via
+    # Unicode quadrant block characters (▘▝▖▗▀▄▌▐▙▚▛▜▟▞█ + space).
+    # Result: 4 sub-cells per visual cell, each can be lit/dark
+    # independently — gives a 2-row "grid of mini squares" illusion.
+
+    # quad-random: 4 cells, each picks a different random pattern per
+    # frame. Visually busy — "many cells flashing on/off independently"
+    "quad-random": [
+        "▘▗▖▝", "▟▙▛▜", "▖▘▗▝", "▞▀▄▚",
+        "▝▖▘▗", "▛▜▟▙", "▖▝▘▗", "▚▞▀▄",
+        "▌▐▝▘", "▟▖▞▛", "▀▙▚▗", "▐▌▜▝",
+    ],
+
+    # quad-twinkle: sparse single-corner lights in a 6-cell row.
+    # Slower, calmer — feels like stars twinkling on/off, not chaos
+    "quad-twinkle": [
+        "▘     ", "  ▝   ", "    ▗ ", " ▖    ",
+        "   ▖  ", "▝   ▗ ", "  ▘ ▗ ", "▖   ▝ ",
+        "   ▘  ", "▗  ▖  ",
+    ],
+
+    # quad-pulse: all 4 cells light together then fade through corners
+    # back to empty. Slow heartbeat through quadrant fill levels
+    "quad-pulse": [
+        "    ", "▘▝▖▗", "▙▚▞▟", "████",
+        "▙▚▞▟", "▘▝▖▗", "    ", "    ",
+    ],
+
+    # quad-rain: half-blocks falling in random columns — 2-row vertical
+    # drop illusion (▀ = head, █ = mid-fall, ▄ = bottom, space = clear)
+    "quad-rain": [
+        "▀  ▀ ", "█  █▀", "▄  █ ", " ▀ ▄ ",
+        "▀█   ", "▄█ ▀ ", " ▄ █ ", "  ▄▄ ",
+        "▀ ▀  ", "█▀█  ",
+    ],
+
+    # quad-cross: alternating diagonal blocks — ▚/▞ checkerboard shift.
+    # Hypnotic, mathematical; less "random" more "geometric flicker"
+    "quad-cross": [
+        "▚▞▚▞", "▞▚▞▚", "▚▚▞▞", "▞▞▚▚",
+        "█▚▞ ", " ▞▚█", "▚█ ▞", "▞ █▚",
+    ],
 }
 
 DEFAULT_SPINNER_STYLE = "dots"
