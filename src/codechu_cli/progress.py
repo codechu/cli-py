@@ -271,6 +271,31 @@ SPINNER_STYLES: dict[str, list[str]] = {
         "▚▞▚▞", "▞▚▞▚", "▚▚▞▞", "▞▞▚▚",
         "█▚▞ ", " ▞▚█", "▚█ ▞", "▞ █▚",
     ],
+
+    # --- Conveyor / pipeline ------------------------------------------
+    # Multiple discrete items continuously shifting right — "batches
+    # being processed through a pipeline". Distinct from comet (single
+    # head + fade trail): conveyor has multiple items, no fade.
+
+    # conveyor: paired blocks ▓░ marching right, 4-cell phase repeat
+    "conveyor": [
+        "▓░  ▓░  ", " ▓░  ▓░ ", "  ▓░  ▓░", "░  ▓░  ▓",
+    ],
+    # conveyor-fast: same shape, 2-cell stride (twice as quick visually)
+    "conveyor-fast": [
+        "▓░▓░▓░▓░", "░▓░▓░▓░▓",
+    ],
+    # conveyor-mixed: varied item sizes — irregular cargo on the belt
+    "conveyor-mixed": [
+        "━ ━━  ━ ", " ━ ━━  ━", "━ ━ ━━  ", " ━ ━ ━━ ",
+        "  ━ ━ ━━", "━  ━ ━ ━", "━━  ━ ━ ", " ━━  ━ ━",
+    ],
+    # pipeline: bracketed packages — emphasis on "discrete unit" feel,
+    # 4 items spaced apart, each shifts one cell per frame
+    "pipeline": [
+        "[ ]  [ ] ", " [ ]  [ ]", "[]  [ ]  ", " []  [ ] ",
+        "  []  [ ]", "   []  []", " ]  []  [", "  ]  []  ",
+    ],
 }
 
 DEFAULT_SPINNER_STYLE = "dots"
