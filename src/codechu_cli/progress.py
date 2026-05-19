@@ -198,6 +198,35 @@ SPINNER_STYLES: dict[str, list[str]] = {
         "●     ●●", " ●   ●● ", "  ● ●●  ", "  ●●●   ",
         "   ●●   ", "  ● ●   ", " ●   ●  ", "●     ●●",
     ],
+
+    # --- Matrix / digital-rain --------------------------------------
+    # True multi-column rain needs multi-line UI (v0.2 Live coordinator).
+    # Single-line variants that evoke the aesthetic:
+
+    # matrix: single cell flickering through katakana/symbols — a
+    # character "morphing" in place, classic Matrix close-up feel
+    "matrix": [
+        "ﾊ", "ﾐ", "ﾑ", "ﾒ", "ﾓ", "ｦ", "ｱ", "ｲ", "ｳ", "ｴ",
+        "ｵ", "ﾅ", "ﾆ", "ﾇ", "ﾈ", "ﾉ", "0", "1", "Z", "ﾄ",
+    ],
+    # matrix-rain: 4 columns each cycling random chars at offset phases
+    # — looks like a horizontal slice through rain
+    "matrix-rain": [
+        "ﾊ ｱ 1 ﾐ", "ﾐ ﾊ 0 ｴ", "ｱ ﾐ 1 ﾄ", "ｴ ﾊ 0 ﾅ",
+        "ﾆ ｱ 1 ﾐ", "ﾅ ﾐ 0 ﾊ", "ﾄ ﾆ 1 ｴ", "ｦ ﾅ 0 ｱ",
+        "ｲ ﾄ 1 ﾆ", "ﾐ ｦ 0 ﾅ",
+    ],
+    # matrix-drop: single cell vertical-fall illusion via half-blocks
+    # — top edge → upper half → full → lower half → bottom → gone
+    "matrix-drop": [
+        "▔", "▀", "█", "▄", "▁", " ",
+    ],
+    # matrix-trail: head + fading body — vertical drop with afterglow
+    # (each frame is the head's position, but the body persists as
+    # different fill levels — uses subpixel chars for smoothness)
+    "matrix-trail": [
+        "▔", "▀", "█", "▆", "▄", "▂", "▁", " ",
+    ],
 }
 
 DEFAULT_SPINNER_STYLE = "dots"
