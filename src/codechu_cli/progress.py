@@ -296,6 +296,47 @@ SPINNER_STYLES: dict[str, list[str]] = {
         "[ ]  [ ] ", " [ ]  [ ]", "[]  [ ]  ", " []  [ ] ",
         "  []  [ ]", "   []  []", " ]  []  [", "  ]  []  ",
     ],
+
+    # --- Pacman / Game of Life ----------------------------------------
+    # Iconic aesthetics, not literal simulations — true cellular
+    # automata or arcade games need multi-line UI (v0.2 Live).
+
+    # pacman: classic mouth-chomping moving right, eating pellets
+    "pacman": [
+        "C • • • •", "O • • • •", " c• • • •", " C • • • •",
+        "  o• • •",  "  C • • •", "   c• •",   "   C • •",
+        "    o•",    "    C •",   "     c",    "     C",
+    ],
+    # pacman-reverse: pacman moving left (mirror), pellets behind
+    "pacman-reverse": [
+        "• • • • C", "• • • • O", "• • • •c ", "• • • •C ",
+        "• • • o  ", "• • • C  ", "• • o    ", "• • C    ",
+        "• o      ", "• C      ", "o        ", "C        ",
+    ],
+    # pacman-ghost: pacman fleeing while ghost chases — adversarial
+    "pacman-ghost": [
+        "C  ᗣ    ", " C  ᗣ   ", "  C  ᗣ  ", "   C  ᗣ ",
+        "    C  ᗣ", "ᗣ    C  ", " ᗣ    C ", "  ᗣ    C",
+    ],
+
+    # game-of-life: sparse cells evolving — not real CA, but the
+    # emergent visual feel of Conway's Game of Life
+    "game-of-life": [
+        "▘   ▝   ", " ▘▖    ▗", "  ▝▘    ", "▝ ▗  ▘ ▝",
+        "  ▖▝▘▗  ", " ▘▝▖▘   ", "▝ ▘▘ ▝▖ ", "▖   ▘ ▝▘",
+        "  ▖  ▝▗ ", "▘▝▖ ▘   ",
+    ],
+    # life-glider: single sub-pixel "glider" moving diagonally — the
+    # most famous GoL pattern, distilled to its essence
+    "life-glider": [
+        "▘     ", " ▖    ", "  ▝   ", "   ▖  ", "    ▝ ",
+        "     ▖", "▝     ", " ▖    ",
+    ],
+    # life-blinker: 3-cell oscillator alternating horizontal/vertical
+    # (the simplest GoL oscillator); rendered with half-blocks
+    "life-blinker": [
+        "▄▄▄ ", "    ", " ▌  ", "    ", "▄▄▄ ", "    ",
+    ],
 }
 
 DEFAULT_SPINNER_STYLE = "dots"
