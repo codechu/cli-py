@@ -113,6 +113,51 @@ SPINNER_STYLES: dict[str, list[str]] = {
         "●○○○○○○○", "○●○○○○○●", "○○●○○○●○", "○○○●○●○○",
         "○○○○●○○○", "○○○●○●○○", "○○●○○○●○", "○●○○○○○●",
     ],
+
+    # --- Chaos / heavy-load / stress patterns --------------------------
+    # static: TV-static gradient noise. Suggests "many things happening,
+    # not periodic" — good for heavy parallel work.
+    "static": [
+        "░▒▓▒░▓▒░", "▓░▒▓░▒░▓", "▒▓░▒▓░▓▒",
+        "░▓▒░▓▒▓░", "▓▒░▒▓░▒▓", "▒░▓▒░▓▒░",
+    ],
+    # storm: scattered raindrops + dashes, irregular spacing. Asymmetric
+    # by design — eye reads it as unpredictable.
+    "storm": [
+        "╱  ·  ╲ ", " ·╱  ╲  ", "╲  ·╱  ·", "·  ╲ ·  ",
+        " ╱·  ╲ ·", "╲ · ╱   ", "  ╱ ·  ╲", "· ╲  ╱· ",
+    ],
+    # sparks: explosive sparkle bursts at random positions. Each frame
+    # has a different cluster — no two consecutive look alike.
+    "sparks": [
+        "· ✦   ·  ", "✦  · ✦  ·", "  ✦·   ✦ ", "· ✦  ✦  ·",
+        "✦   · ✦  ", " ✦ ·   ✦·", "·  ✦ ·  ✦", " ·✦  ·✦  ",
+    ],
+    # fireworks: single burst that grows + fades, then a beat of calm.
+    # The pause is intentional — gives rhythm to the chaos.
+    "fireworks": [
+        "         ", "    ·    ", "   ·✦·   ", "  ✶✦✶    ",
+        " ·✶✦✶·   ", "  ·✦·    ", "         ", "  ·      ",
+    ],
+    # electricity: lightning bolts striking at random positions.
+    # Discontinuous frames — feels like discrete strikes, not flow.
+    "electricity": [
+        "⚡       ", "   ⚡    ", "        ", "⚡  ⚡   ",
+        "      ⚡ ", "        ", " ⚡   ⚡ ", "    ⚡   ",
+    ],
+    # maelstrom: swirling diagonals — angry slashes intersecting.
+    # Suggests "system under turbulence" without specifying error state.
+    "maelstrom": [
+        "╲╱╲╱╲╱", "╱╲╱╲╱╲", "╲╱╲╲╱╱", "╱╱╲╲╱╲",
+        "╲╲╱╱╲╱", "╱╲╲╱╲╱", "╲╱╱╲╲╱", "╱╲╱╲╲╱",
+    ],
+    # build-up: calm → busy → eruption → calm. One full intensity arc
+    # per cycle; suggests "load is increasing under pressure".
+    "build-up": [
+        "·       ", "··      ", "···     ", "·· ·    ",
+        "·· ··   ", "·✦ ·· · ", "·✦·✦·✦·✦", "·  ✦  · ",
+        "        ", "   ·    ",
+    ],
 }
 
 DEFAULT_SPINNER_STYLE = "dots"
