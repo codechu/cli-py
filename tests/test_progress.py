@@ -6,7 +6,15 @@ import io
 import threading
 import time
 
-from codechu_cli import ProgressBar, ProgressLine, Spinner
+import pytest
+
+from codechu_cli import (
+    BAR_STYLES,
+    SPINNER_STYLES,
+    ProgressBar,
+    ProgressLine,
+    Spinner,
+)
 
 from conftest import TTYStringIO
 
@@ -163,6 +171,142 @@ def test_progressbar_template_elapsed_and_eta():
     assert "e=" in text
     # eta is no longer "?" after meaningful advance
     assert "eta=0s" in text or "eta=1s" in text or "eta=" in text
+
+
+def test_spinner_style_dots():
+    sp = Spinner("x", style="dots")
+    assert list(sp.frames) == SPINNER_STYLES["dots"]
+
+
+def test_spinner_style_unknown_raises():
+    with pytest.raises(KeyError) as exc:
+        Spinner("x", style="zzz")
+    msg = str(exc.value)
+    assert "zzz" in msg
+    assert "dots" in msg
+
+
+def test_spinner_explicit_frames_overrides_style():
+    sp = Spinner("x", style="dots", frames=["A", "B"])
+    assert list(sp.frames) == ["A", "B"]
+
+
+def test_progress_bar_style_block():
+    bar = ProgressBar(10, style="block")
+    assert bar.fill == "█"
+    assert bar.empty == "░"
+
+
+def test_progress_bar_style_unknown_raises():
+    with pytest.raises(KeyError) as exc:
+        ProgressBar(10, style="zzz")
+    msg = str(exc.value)
+    assert "zzz" in msg
+    assert "block" in msg
+
+
+def test_progress_bar_explicit_fill_overrides_style():
+    bar = ProgressBar(10, style="block", fill="*")
+    assert bar.fill == "*"
+    # empty still comes from the style
+    assert bar.empty == "░"
+
+
+def test_bar_styles_registry_has_codechu():
+    assert "codechu" in BAR_STYLES
+    assert "codechu-gradient" in BAR_STYLES
+    assert BAR_STYLES["codechu"] == {"fill": "▰", "empty": "▱"}
+
+
+def test_spinner_styles_registry_has_codechu():
+    assert "codechu" in SPINNER_STYLES
+    assert "codechu-fade" in SPINNER_STYLES
+    assert SPINNER_STYLES["codechu"] == ["◐", "◓", "◑", "◒"]
+
+
+def test_spinner_styles_block_patterns_present():
+    # 5-cell block patterns
+    for name in ("blocks-bounce", "blocks-fill", "blocks-snake",
+                 "blocks-pulse", "blocks-fill-solid"):
+        assert name in SPINNER_STYLES, f"missing 5-cell style {name}"
+        # Every frame in a 5-cell pattern is 5 visible columns wide.
+        for frame in SPINNER_STYLES[name]:
+            assert len(frame) == 5, f"{name} frame length != 5: {frame!r}"
+
+
+def test_spinner_styles_3cell_patterns_present():
+    for name in ("dots3", "wave3", "tri3"):
+        assert name in SPINNER_STYLES
+        for frame in SPINNER_STYLES[name]:
+            assert len(frame) == 3, f"{name} frame length != 3: {frame!r}"
+
+
+def test_spinner_styles_single_cell_grow():
+    # grow-h / grow-v cycle through eighths plus the full block.
+    assert "▏" in SPINNER_STYLES["grow-h"]
+    assert "█" in SPINNER_STYLES["grow-h"]
+    assert "▁" in SPINNER_STYLES["grow-v"]
+    assert "█" in SPINNER_STYLES["grow-v"]
+
+
+def test_spinner_styles_toggle_pairs():
+    for name in ("toggle", "toggle-sq", "toggle-rd"):
+        assert name in SPINNER_STYLES
+        assert len(SPINNER_STYLES[name]) == 2
+
+
+def test_blocks_style_default_width():
+    bar = ProgressBar(10, style="blocks")
+    assert bar.width == 5
+
+
+def test_blocks_style_explicit_width_wins():
+    bar = ProgressBar(10, style="blocks", width=12)
+    assert bar.width == 12
+
+
+def test_claude_alias_exists():
+    assert "claude" in BAR_STYLES
+    assert BAR_STYLES["claude"].get("width") == 10
+
+
+def test_smooth_style_default():
+    bar = ProgressBar(8, style="smooth")
+    assert bar.smooth is True
+    assert bar.width == 10
+
+
+def test_smooth_renders_subpixel():
+    s = TTYStringIO()
+    bar = ProgressBar(8, stream=s, style="smooth")
+    for _ in range(8):
+        bar.advance(1)
+    bar.finish()
+    text = s.getvalue()
+    partials = "▏▎▍▌▋▊▉"
+    assert any(ch in text for ch in partials), (
+        "expected at least one subpixel partial-fill char in rendered frames"
+    )
+
+
+def test_smooth_full_renders_full_blocks():
+    s = TTYStringIO()
+    bar = ProgressBar(4, stream=s, style="smooth")
+    bar.advance(4)
+    bar.finish()
+    text = s.getvalue()
+    # At 100% the bar body should be exactly width full blocks.
+    assert "[" + ("█" * 10) + "]" in text
+
+
+def test_blocks_render_fixed_count():
+    s = TTYStringIO()
+    bar = ProgressBar(5, stream=s, style="blocks")
+    bar.advance(3)
+    bar.finish()
+    text = s.getvalue()
+    # Find the latest rendered frame containing the 60% bar.
+    assert "[" + "▰" * 3 + "▱" * 2 + "]" in text
 
 
 # Touch `time` so ruff doesn't strip the import (we leave it available

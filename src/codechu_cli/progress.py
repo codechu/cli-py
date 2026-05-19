@@ -14,6 +14,141 @@ _BRAILLE_FRAMES = ("⠋", "⠙", "⠹", "⠸", "⠼",
 _ASCII_FRAMES = ("|", "/", "-", "\\")
 
 
+SPINNER_STYLES: dict[str, list[str]] = {
+    # Industry classics (names match cli-spinners' canon where applicable):
+    "dots":     ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
+    "dots2":    ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"],
+    "line":     ["|", "/", "-", "\\"],          # ASCII safe
+    "arc":      ["◜", "◠", "◝", "◞", "◡", "◟"],
+    "bouncing": ["⠁", "⠂", "⠄", "⠂"],            # subtle dot bounce
+    "pulse":    ["•", "◦", " ", "◦"],
+    "clock":    ["🕐", "🕑", "🕒", "🕓", "🕔", "🕕",
+                 "🕖", "🕗", "🕘", "🕙", "🕚", "🕛"],
+
+    # Codechu signature: clockwise disk quarters — echoes the disk-cleaner
+    # mark / Codechu publisher visual (radial gradient disk).
+    "codechu":      ["◐", "◓", "◑", "◒"],
+    "codechu-fade": ["▒", "▓", "█", "▓"],   # solid pulse, for "deep work"
+
+    # 5-cell block patterns — Claude Code-style indeterminate progress
+    # bars that double as spinners (work without a known total).
+    "blocks-bounce": [
+        "▰▱▱▱▱", "▱▰▱▱▱", "▱▱▰▱▱", "▱▱▱▰▱", "▱▱▱▱▰",
+        "▱▱▱▰▱", "▱▱▰▱▱", "▱▰▱▱▱",
+    ],
+    "blocks-fill": [
+        "▱▱▱▱▱", "▰▱▱▱▱", "▰▰▱▱▱", "▰▰▰▱▱", "▰▰▰▰▱", "▰▰▰▰▰",
+    ],
+    "blocks-snake": [
+        "▰▱▱▱▱", "▰▰▱▱▱", "▰▰▰▱▱", "▰▰▰▰▱", "▰▰▰▰▰",
+        "▱▰▰▰▰", "▱▱▰▰▰", "▱▱▱▰▰", "▱▱▱▱▰", "▱▱▱▱▱",
+    ],
+    "blocks-pulse": ["▱▱▱▱▱", "▰▰▰▰▰"],
+    "blocks-fill-solid": [
+        "     ", "█    ", "██   ", "███  ", "████ ", "█████",
+    ],
+
+    # 3-cell patterns — even narrower; fit inline next to a label
+    "dots3":   [".  ", ".. ", "...", " ..", "  .", "   "],
+    "wave3":   ["▁  ", "▂▁ ", "▃▂▁", "▄▃▂", "▃▄▃", "▂▃▄", "▁▂▃", " ▁▂", "  ▁"],
+    "tri3":    ["◐◯◯", "◯◐◯", "◯◯◐", "◯◐◯"],
+
+    # Single-cell grow/shrink — subpixel pulse using eighths
+    "grow-h":  ["▏", "▎", "▍", "▌", "▋", "▊", "▉", "█",
+                "▉", "▊", "▋", "▌", "▍", "▎"],
+    "grow-v":  ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█",
+                "▇", "▆", "▅", "▄", "▃", "▂"],
+
+    # Arrows + toggles
+    "arrow3":     ["▸▹▹▹▹", "▹▸▹▹▹", "▹▹▸▹▹", "▹▹▹▸▹", "▹▹▹▹▸"],
+    "toggle":     ["■", "□"],
+    "toggle-sq":  ["▪", "▫"],
+    "toggle-rd":  ["⊙", "⊚"],
+
+    # Pictographic — for fun / dev-mode banners; emoji-only terminals
+    "earth":   ["🌍", "🌎", "🌏"],
+    "moon":    ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"],
+    "weather": ["☀ ", "☀☁", "☁☁", "☁🌧", "🌧🌧", "🌧☁", "☁☀", " ☀"],
+
+    # --- Striking / modern ---------------------------------------------
+    # comet: solid head with fading tail, wraps around 8 cells
+    "comet": [
+        "█▓▒░    ", " █▓▒░   ", "  █▓▒░  ", "   █▓▒░ ",
+        "    █▓▒░", "░    █▓▒", "▒░    █▓", "▓▒░    █",
+    ],
+    # wave: 8-column sine wave shifting left, audio-visualizer feel
+    "wave": [
+        "▂▃▅▆▇█▇▆", "▃▅▆▇█▇▆▅", "▅▆▇█▇▆▅▃", "▆▇█▇▆▅▃▂",
+        "▇█▇▆▅▃▂▁", "█▇▆▅▃▂▁▂", "▇▆▅▃▂▁▂▃", "▆▅▃▂▁▂▃▅",
+    ],
+    # pulse-radial: radial expand+contract from center, 7 wide
+    "pulse-radial": [
+        "   █   ", "  ▓█▓  ", " ▒▓█▓▒ ", "░▒▓█▓▒░",
+        " ▒▓█▓▒ ", "  ▓█▓  ",
+    ],
+    # equalizer: 4-column vertical bars, oscillate independently
+    "equalizer": [
+        "▁▃▅▇", "▃▅▇█", "▅▇█▇", "▇█▇▅",
+        "█▇▅▃", "▇▅▃▁", "▅▃▁▃", "▃▁▃▅",
+    ],
+    # ripple: solid head leaving fading ring trail, restart per cycle
+    "ripple": [
+        "█       ", "▓█      ", "▒▓█     ", "░▒▓█    ",
+        " ░▒▓█   ", "  ░▒▓█  ", "   ░▒▓█ ", "    ░▒▓█",
+    ],
+    # orbit-quad: 2-cell corner pair rotating clockwise — minimalist
+    "orbit-quad": ["◜◝", "◝◞", "◞◟", "◟◜"],
+    # shimmer: sparkles + dots at varying positions, feels alive
+    "shimmer": [
+        "·  ✦   ", " ✦   · ", "  · ✦  ", "✦   ·  ",
+        "  ✦   ·", "· ✦    ",
+    ],
+    # glitch: brief disturbed-text moments — deliberate jank
+    "glitch": [
+        "▒▓█▓▒", "▓█▒░█", "▒▓░█▒", "█▒▓░▓",
+        "▓▒█▓░", "░▓▒█▓",
+    ],
+    # double-bounce: two dots in opposite phase — disco rhythm
+    "double-bounce": [
+        "●○○○○○○○", "○●○○○○○●", "○○●○○○●○", "○○○●○●○○",
+        "○○○○●○○○", "○○○●○●○○", "○○●○○○●○", "○●○○○○○●",
+    ],
+}
+
+DEFAULT_SPINNER_STYLE = "dots"
+
+
+BAR_STYLES: dict[str, dict] = {
+    # Industry classics
+    "ascii":  {"fill": "#",  "empty": "-"},   # cargo, GitHub Actions
+    "equals": {"fill": "=",  "empty": "-"},   # Docker, classic make
+    "block":  {"fill": "█",  "empty": "░"},   # modern npm/cargo
+    "slim":   {"fill": "━",  "empty": "─"},
+    "dots":   {"fill": "●",  "empty": "○"},
+    "arrow":  {"fill": "▶",  "empty": " "},
+    "pipe":   {"fill": "|",  "empty": " "},   # very minimal
+
+    # Codechu signature: gradient blocks (matches disk-cleaner UI fill)
+    "codechu":          {"fill": "▰", "empty": "▱"},
+    "codechu-gradient": {"fill": "▓", "empty": "░"},
+
+    # Fixed-block (Claude Code-style polish — width baked into the preset)
+    "blocks":      {"fill": "▰", "empty": "▱", "width": 5},
+    "blocks-wide": {"fill": "▰", "empty": "▱", "width": 8},
+    "blocks-fat":  {"fill": "█", "empty": "░", "width": 5},
+    "claude":      {"fill": "█", "empty": "░", "width": 10},   # alias / homage
+
+    # Subpixel-smooth: narrow bars that render fractional progress via eighths
+    "smooth":      {"fill": "█", "empty": " ", "width": 10, "smooth": True},
+    "smooth-wide": {"fill": "█", "empty": " ", "width": 20, "smooth": True},
+}
+
+DEFAULT_BAR_STYLE = "ascii"
+
+# Eighths ramp used by smooth rendering (9 stops: 0/8 .. 8/8).
+SUBPIXEL = " ▏▎▍▌▋▊▉█"
+
+
 def _stream_is_tty(stream: IO[str]) -> bool:
     isatty = getattr(stream, "isatty", None)
     try:
@@ -90,18 +225,30 @@ class ProgressBar:
         total: int,
         *,
         stream: IO[str] | None = None,
-        width: int = 40,
-        fill: str = "#",
-        empty: str = "-",
+        width: int | None = None,
+        style: str | None = None,
+        fill: str | None = None,
+        empty: str | None = None,
+        smooth: bool | None = None,
         template: str | None = None,
         enabled: bool | None = None,
     ) -> None:
         self._stream = stream if stream is not None else sys.stderr
-        self.width = max(4, width)
         self.total = max(0, int(total))
         self.current = 0
-        self.fill = fill
-        self.empty = empty
+        if style is not None and style not in BAR_STYLES:
+            raise KeyError(
+                f"unknown bar style {style!r}. "
+                f"Available: {sorted(BAR_STYLES)}"
+            )
+        preset = BAR_STYLES[style if style is not None else DEFAULT_BAR_STYLE]
+        self.fill = fill if fill is not None else preset.get("fill", "#")
+        self.empty = empty if empty is not None else preset.get("empty", "-")
+        resolved_width = width if width is not None else preset.get("width", 40)
+        # Allow narrow fixed-block presets (5–8 cells); only floor if the
+        # caller passed something nonsensical with the default ascii preset.
+        self.width = max(1, int(resolved_width))
+        self.smooth = bool(smooth if smooth is not None else preset.get("smooth", False))
         self.template = template if template is not None else self.DEFAULT_TEMPLATE
         if enabled is None:
             enabled = _stream_is_tty(self._stream)
@@ -117,15 +264,32 @@ class ProgressBar:
         self.current = min(self.total, self.current + n) if self.total else self.current + n
         self._render(label=label)
 
+    def _render_smooth(self, frac: float) -> str:
+        """Render ``self.width`` cells using eighths-based partial fills."""
+        if self.width <= 0:
+            return ""
+        frac = max(0.0, min(1.0, frac))
+        total_eighths = int(round(frac * self.width * 8))
+        full_cells = total_eighths // 8
+        remainder = total_eighths % 8
+        out = "█" * full_cells
+        if full_cells < self.width:
+            out += SUBPIXEL[remainder]
+            out += " " * (self.width - full_cells - 1)
+        return out
+
     def _render(self, *, label: str) -> None:
         if not self.enabled:
             return
         total = self.total or 1
         ratio = min(1.0, self.current / total) if total else 0.0
-        filled = int(round(ratio * self.width))
-        # Repeat fill/empty strings; clamp if a multi-char glyph would
-        # overflow due to int rounding edges.
-        bar_str = (self.fill * filled) + (self.empty * (self.width - filled))
+        if self.smooth:
+            bar_str = self._render_smooth(ratio)
+        else:
+            filled = int(round(ratio * self.width))
+            # Repeat fill/empty strings; clamp if a multi-char glyph would
+            # overflow due to int rounding edges.
+            bar_str = (self.fill * filled) + (self.empty * (self.width - filled))
         pct = int(round(ratio * 100))
         elapsed = time.monotonic() - self._t_start
         if self.total > 0 and self.current > 0:
@@ -175,6 +339,7 @@ class Spinner:
         message: str = "",
         *,
         stream: IO[str] | None = None,
+        style: str | None = None,
         frames: tuple[str, ...] | list[str] | None = None,
         interval: float = 0.08,
         enabled: bool | None = None,
@@ -186,8 +351,16 @@ class Spinner:
             enabled = _stream_is_tty(self._stream)
         self.enabled = enabled
         if frames is None:
-            caps = capabilities(self._stream)
-            frames = _BRAILLE_FRAMES if "unicode" in caps else _ASCII_FRAMES
+            if style is not None:
+                if style not in SPINNER_STYLES:
+                    raise KeyError(
+                        f"unknown spinner style {style!r}. "
+                        f"Available: {sorted(SPINNER_STYLES)}"
+                    )
+                frames = SPINNER_STYLES[style]
+            else:
+                caps = capabilities(self._stream)
+                frames = _BRAILLE_FRAMES if "unicode" in caps else _ASCII_FRAMES
         self.frames = tuple(frames)
         self._line = ProgressLine(self._stream, enabled=self.enabled)
         self._stop = threading.Event()
@@ -227,7 +400,15 @@ class Spinner:
 
 
 # Re-export for tests that want to monkeypatch.
-__all__ = ["ProgressBar", "ProgressLine", "Spinner"]
+__all__ = [
+    "BAR_STYLES",
+    "DEFAULT_BAR_STYLE",
+    "DEFAULT_SPINNER_STYLE",
+    "ProgressBar",
+    "ProgressLine",
+    "SPINNER_STYLES",
+    "Spinner",
+]
 
 
 # Keep ``time`` referenced so tests can ``monkeypatch.setattr(progress, 'time', fake)``.

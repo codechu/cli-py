@@ -58,6 +58,80 @@ with Spinner("Scanning…"):
     walk_filesystem()
 ```
 
+### Styles (ProgressBar + Spinner)
+
+Both `ProgressBar` and `Spinner` accept a named `style=` preset so you
+don't have to remember glyphs. Explicit `fill`/`empty`/`frames` still
+win — `style` just supplies defaults.
+
+```python
+from codechu_cli import ProgressBar, Spinner
+
+# Industry-standard
+ProgressBar(100, style="block")    # █░ — npm/cargo
+ProgressBar(100, style="ascii")    # #- — GitHub Actions
+ProgressBar(100, style="equals")   # =- — Docker
+
+# Codechu signature
+ProgressBar(100, style="codechu")  # ▰▱ — matches disk-cleaner UI
+
+# Spinner styles — industry classics
+Spinner("…", style="dots")          # ⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏  braille (default)
+Spinner("…", style="dots2")         # ⣾⣽⣻⢿⡿⣟⣯⣷  bolder braille
+Spinner("…", style="line")          # |/-\  ASCII safe
+Spinner("…", style="arc")           # ◜◠◝◞◡◟
+Spinner("…", style="pulse")         # • ◦   ◦
+
+# Spinner styles — N-cell block patterns (Claude Code-style)
+Spinner("…", style="blocks-bounce") # ▰▱▱▱▱ → ▱▰▱▱▱ → … 5-cell bouncing
+Spinner("…", style="blocks-fill")   # ▱▱▱▱▱ → ▰▰▰▰▰  fill cycle
+Spinner("…", style="blocks-snake")  # fill + drain (10 frames)
+Spinner("…", style="blocks-pulse")  # ▱▱▱▱▱ ↔ ▰▰▰▰▰
+Spinner("…", style="arrow3")        # ▸▹▹▹▹ → ▹▸▹▹▹ →  5-cell arrow scan
+
+# Spinner styles — 3-cell variants (fit inline next to a label)
+Spinner("…", style="dots3")         # .  → .. → ...
+Spinner("…", style="wave3")         # ▁▂▃ vertical wave
+Spinner("…", style="tri3")          # ◐◯◯ → ◯◐◯ → ◯◯◐
+
+# Spinner styles — single-cell pulses
+Spinner("…", style="grow-h")        # ▏▎▍▌▋▊▉█  horizontal grow (subpixel)
+Spinner("…", style="grow-v")        # ▁▂▃▄▅▆▇█  vertical grow
+Spinner("…", style="toggle")        # ■ ↔ □
+Spinner("…", style="codechu")       # ◐◓◑◒  disk-quarters, Codechu signature
+Spinner("…", style="codechu-fade")  # ▒▓█▓  solid pulse
+
+# Pictographic (terminal must support emoji)
+Spinner("…", style="earth")         # 🌍🌎🌏
+Spinner("…", style="moon")          # 🌑🌒🌓🌔🌕🌖🌗🌘
+Spinner("…", style="clock")         # 🕐🕑🕒…
+
+# Fixed small-block (Claude Code-style polish — width baked in)
+ProgressBar(100, style="blocks")        # ▰▰▰▱▱   width=5
+ProgressBar(100, style="blocks-wide")   # 8 cells
+ProgressBar(100, style="claude")        # █░ at width=10
+
+# Subpixel-smooth — narrow bar that still shows fractional progress
+ProgressBar(100, style="smooth")        # 10-cell, 80 distinct stops
+ProgressBar(100, style="smooth-wide")   # 20-cell, 160 distinct stops
+
+# Full override still works (style provides defaults; fill/empty/frames override)
+ProgressBar(100, style="block", fill="*")
+Spinner("…", style="dots", frames=["A", "B", "C"])
+```
+
+Fixed-block styles bake their width into the preset (Claude Code-style
+polish: 5–10 cells); smooth styles use Unicode eighth-block partial
+fills so a 10-cell bar still has 80 distinct steps.
+
+When you don't know the total upfront, prefer `Spinner` over
+`ProgressBar` — it signals "work in progress" without misleading
+percentages. Reach for `ProgressBar` only when you can count items
+honestly.
+
+The full registries are exported as `SPINNER_STYLES` and `BAR_STYLES`
+for introspection (e.g. for `--style` help text in a CLI).
+
 ### Confirm + prompt
 
 ```python

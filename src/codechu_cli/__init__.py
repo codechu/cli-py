@@ -10,16 +10,18 @@ from .banner import LOGOS, ascii_banner, banner
 from .color import Color
 from .emoji import capabilities, e
 from .format import format_examples, resolve_format
-from .progress import ProgressBar, ProgressLine, Spinner
+from .progress import BAR_STYLES, SPINNER_STYLES, ProgressBar, ProgressLine, Spinner
 from .prompt import confirm, multiselect, prompt, select
 
 __version__ = "0.1.0"
 
 __all__ = [
+    "BAR_STYLES",
     "Color",
     "LOGOS",
     "ProgressBar",
     "ProgressLine",
+    "SPINNER_STYLES",
     "Spinner",
     "__version__",
     "ascii_banner",

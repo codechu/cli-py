@@ -26,3 +26,5 @@
 - `prompt()`: `translate`
 - `select()` / `multiselect()`: `keymap=`, `translate=`
 - `emoji.register()`, `emoji.update()`, `emoji.known()` — runtime glyph extension
+- Spinner/ProgressBar named style presets (industry-standard + Codechu signature)
+- Fixed-block (`blocks`, `claude`) + subpixel (`smooth`) ProgressBar styles
