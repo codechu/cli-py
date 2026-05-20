@@ -1,9 +1,14 @@
 ```text
-   ┌─[ codechu-cli ]──────────────────────────────────┐
-   │ $ deploy --prod                                  │
-   │ ⠿ building ......... [██████████▌      ]  68%    │
-   │ ? continue? [Y/n] ▏                              │
-   └──────────────────────────────────────────────────┘
+━━━━━━━━━━━━ c o d e c h u  ·  c l i ━━━━━━━━━━━━
+
+   $ deploy --prod
+   ? Deploy to production? [Y/n] y
+   deploy
+   [12 of 24 · 50% · 1m 32s · 156 items/s]  ████████████░░░░░░░░░░░░  ⠼
+     ↳ migrating database…                                            ✓
+     ↳ rolling out workers                                            ⠿
+
+━━━ colors · progress · spinners · prompts · tables ━━━
 ```
 
 [![PyPI](https://img.shields.io/pypi/v/codechu-cli.svg)](https://pypi.org/project/codechu-cli/)
@@ -18,13 +23,6 @@
 Line-oriented CLI primitives for Python: colors, progress bars,
 spinners, prompts, tables, boxes. Consistent UX across every Codechu
 tool, with graceful fallbacks for pipes, Windows, and CI.
-
-```text
-deploy
-[12 of 24 · 50% · 1m 32s · 156 items/s]  ████████████░░░░░░░░░░░░  ⠼
-  ↳ migrating database…                                            ✓
-  ↳ rolling out workers                                            ⠿
-```
 
 ## Install
 
