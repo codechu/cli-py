@@ -17,6 +17,16 @@ prompts, emoji helpers — with consistent UX across Codechu tools.
 pip install codechu-cli
 ```
 
+## Documentation
+
+- [`docs/API.md`](docs/API.md) — complete reference for every public
+  symbol (Color, banner, format, emoji, prompt, progress).
+- [`docs/MIGRATION.md`](docs/MIGRATION.md) — v0.1 → v0.2 breaking
+  changes with before/after code.
+- [`docs/RECIPES.md`](docs/RECIPES.md) — eight copy-paste patterns
+  (colored messages, spinners, progress with ETA, confirms,
+  single/multiselect, mixed flows, custom styles).
+
 ## What it gives you
 
 - **`Color`** — ANSI palette with fluent methods (`c.low(...)`, `c.high(...)`)
