@@ -4,6 +4,21 @@
 
 ## [Unreleased]
 
+### Changed (breaking)
+- Explicit-config refactor: library code no longer reads environment
+  variables implicitly. `capabilities()` (in both `emoji` and the
+  private `_term`) is the only env-reading helper, and callers must
+  invoke it themselves.
+- `e(name, caps=None, *, fallback=None)` — `caps` is now a positional
+  parameter that the caller must supply (the previous `stream=` kwarg
+  is gone). Omitting `caps` yields the ASCII fallback; pass
+  `capabilities(...)` to get unicode glyphs.
+- `Spinner(..., caps=None)` — frame selection no longer calls
+  `capabilities()` internally. Pass `caps={"unicode", ...}` to opt
+  into braille frames; default is ASCII.
+- `prompt() / select() / multiselect()` accept a new `caps=` kwarg
+  that is threaded through to `e()` for the glyphs they render.
+
 ## [0.1.0] - 2026-05-20
 
 ### Added

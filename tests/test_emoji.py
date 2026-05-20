@@ -68,62 +68,64 @@ def test_capabilities_non_tty_no_color(monkeypatch):
     assert "emoji" not in caps
 
 
-def test_e_emoji_when_capable(monkeypatch):
-    monkeypatch.setenv("CODECHU_CLI_EMOJI", "always")
-    assert e("ok") == "✓"
-    assert e("fail") == "✗"
+def test_e_emoji_when_capable():
+    caps = {"emoji"}
+    assert e("ok", caps) == "✓"
+    assert e("fail", caps) == "✗"
 
 
-def test_e_fallback_when_not_capable(monkeypatch):
-    monkeypatch.setenv("CODECHU_CLI_EMOJI", "never")
+def test_e_fallback_when_not_capable():
+    caps: set[str] = set()
+    assert e("ok", caps) == "+"
+    assert e("fail", caps) == "x"
+    assert e("ok", caps, fallback="OK") == "OK"
+
+
+def test_e_caps_none_returns_fallback():
+    # Explicit-config rule: omitting caps must NOT silently consult the
+    # environment. It returns the ASCII fallback.
     assert e("ok") == "+"
     assert e("fail") == "x"
-    assert e("ok", fallback="OK") == "OK"
 
 
-def test_e_unknown_name_raises(monkeypatch):
-    monkeypatch.setenv("CODECHU_CLI_EMOJI", "always")
+def test_e_unknown_name_raises():
     with pytest.raises(KeyError):
-        e("nope")
+        e("nope", {"emoji"})
 
 
-def test_register_adds_glyph(monkeypatch):
+def test_register_adds_glyph():
     from codechu_cli import emoji as _emoji
 
-    monkeypatch.setenv("CODECHU_CLI_EMOJI", "always")
     _emoji.register("snap", "📦", "snap")
     try:
-        assert e("snap") == "📦"
-        monkeypatch.setenv("CODECHU_CLI_EMOJI", "never")
-        assert e("snap") == "snap"
+        assert e("snap", {"emoji"}) == "📦"
+        assert e("snap", set()) == "snap"
     finally:
         # cleanup so other tests don't see this glyph
         _emoji._GLYPHS.pop("snap", None)
 
 
-def test_register_overrides_existing(monkeypatch):
+def test_register_overrides_existing():
     from codechu_cli import emoji as _emoji
 
     original = _emoji._GLYPHS["ok"]
-    monkeypatch.setenv("CODECHU_CLI_EMOJI", "always")
     _emoji.register("ok", "Y", "y")
     try:
-        assert e("ok") == "Y"
+        assert e("ok", {"emoji"}) == "Y"
     finally:
         _emoji._GLYPHS["ok"] = original
 
 
-def test_update_bulk(monkeypatch):
+def test_update_bulk():
     from codechu_cli import emoji as _emoji
 
-    monkeypatch.setenv("CODECHU_CLI_EMOJI", "always")
     _emoji.update({
         "rocket": ("🚀", "^"),
         "star": ("⭐", "*"),
     })
     try:
-        assert e("rocket") == "🚀"
-        assert e("star") == "⭐"
+        assert e("rocket", {"emoji"}) == "🚀"
+        assert e("star", {"emoji"}) == "⭐"
     finally:
         _emoji._GLYPHS.pop("rocket", None)
         _emoji._GLYPHS.pop("star", None)

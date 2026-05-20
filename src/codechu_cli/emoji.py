@@ -3,13 +3,20 @@
 Conservative defaults ("temkinli"): if ``LANG=C`` / ``LANG=POSIX`` or
 ``TERM=dumb``, fall back to ASCII glyphs. Set ``CODECHU_CLI_EMOJI=always``
 to force emoji on, ``never`` to force off.
+
+Discipline note (explicit config): :func:`capabilities` is the *one*
+helper in this module that reads environment variables, and it only
+does so when the caller invokes it. :func:`e` does **not** call it
+implicitly — pass the ``caps`` set explicitly, or accept the ASCII
+fallback. This keeps emoji rendering a pure function of its inputs
+and makes apps trivially debuggable.
 """
 
 from __future__ import annotations
 
 import os
 import sys
-from typing import IO
+from typing import IO, Iterable
 
 from ._term import is_tty as _is_tty_helper
 
@@ -40,6 +47,10 @@ def capabilities(stream: IO[str] | None = None) -> set[str]:
     - ``color`` if ``NO_COLOR`` absent + stream is a TTY + ``TERM`` != "dumb".
     - ``emoji`` if (unicode + interactive) or ``CODECHU_CLI_EMOJI=always``.
       ``CODECHU_CLI_EMOJI=never`` removes ``emoji`` unconditionally.
+
+    This is the **only** function in the module that reads environment
+    variables. Call it explicitly from your app's bootstrap and pass
+    the result to :func:`e` (and other helpers that accept ``caps``).
     """
     if stream is None:
         stream = sys.stderr
@@ -66,16 +77,30 @@ def capabilities(stream: IO[str] | None = None) -> set[str]:
     return caps
 
 
-def e(name: str, *, fallback: str | None = None, stream: IO[str] | None = None) -> str:
+def e(
+    name: str,
+    caps: Iterable[str] | None = None,
+    *,
+    fallback: str | None = None,
+) -> str:
     """Look up an emoji by ``name``.
 
-    Returns the unicode glyph when ``"emoji"`` is in :func:`capabilities`,
-    otherwise the ASCII fallback. Pass ``fallback=`` to override.
-    Unknown names raise :class:`KeyError`.
+    Returns the unicode glyph when ``"emoji"`` is in ``caps``, otherwise
+    the ASCII fallback. Pass ``fallback=`` to override the registered
+    ASCII form. Unknown names raise :class:`KeyError`.
+
+    ``caps`` must be supplied explicitly by the caller (typically the
+    result of :func:`capabilities`). If ``caps`` is ``None`` (the
+    default), :func:`e` behaves as if no capabilities are present and
+    returns the ASCII fallback — it does **not** read the environment
+    or call :func:`capabilities` itself. This keeps the function pure
+    and the dependency on terminal state explicit.
     """
     glyph, default_fallback = _GLYPHS[name]
     fb = fallback if fallback is not None else default_fallback
-    return glyph if "emoji" in capabilities(stream) else fb
+    if caps is None:
+        return fb
+    return glyph if "emoji" in caps else fb
 
 
 def register(name: str, glyph: str, fallback: str) -> None:

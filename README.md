@@ -249,17 +249,33 @@ p = argparse.ArgumentParser(
 p.add_argument("--format", default=resolve_format(sys.stdout))
 ```
 
-### Emoji helpers
+### Emoji helpers (explicit-config pattern)
+
+Capability detection is **explicit**. Call `capabilities()` once at
+startup — it is the only function in the package that reads
+environment variables — and pass the resulting set into every renderer
+that needs it. `e()` does not consult the environment on its own.
 
 ```python
+import sys
 from codechu_cli import capabilities, e
 
-caps = capabilities()  # {"unicode", "color", "emoji"} or subset
-print(f"{e('ok')} done")            # "✓ done" or "+ done"
-print(f"{e('arrow')} next step")    # "→ next step" or "-> next step"
+caps = capabilities(sys.stderr)  # {"unicode", "color", "emoji"} or subset
+print(f"{e('ok', caps)} done")          # "✓ done" or "+ done"
+print(f"{e('arrow', caps)} next step")  # "→ next step" or "-> next step"
+
+# Omitting caps is fine — it deterministically yields the ASCII form.
+print(e("ok"))   # "+"
+
+# Pipe caps into Spinner / select / multiselect so their glyphs match.
+from codechu_cli import Spinner, select
+with Spinner("Scanning…", caps=caps):
+    pass
+select("Pick", ["a", "b"], caps=caps)
 ```
 
-`CODECHU_CLI_EMOJI=never` forces ASCII, `always` forces unicode.
+`CODECHU_CLI_EMOJI=never` forces ASCII, `always` forces unicode — both
+are read by `capabilities()`, not by the renderers.
 
 ## API reference
 
@@ -269,15 +285,15 @@ print(f"{e('arrow')} next step")    # "→ next step" or "-> next step"
 | `banner(title, version, *, mode=None, stream=...)` | TTY-only header |
 | `ProgressLine(stream=None, enabled=None)` | `.update()` / `.clear()` |
 | `ProgressBar(total, *, enabled=None)` | fluent builder: `.stream() .width() .style() .with_eta() .with_rate() .prefix() .suffix()`, then `.advance() / .set_total() / .finish()` |
-| `Spinner(message, *, frames=None, interval=0.08)` | context-manager only: `with Spinner(...): ...` |
+| `Spinner(message, *, frames=None, interval=0.08, caps=None)` | context-manager only: `with Spinner(...): ...` |
 | `confirm(prompt, *, default, assume_yes, ...)` | yes/no |
-| `prompt(message, *, default, validate, password, ...)` | single-line input |
-| `select(message, choices, *, default=0, ...)` | single-choice picker |
-| `multiselect(message, choices, *, defaults=(), ...)` | multi-choice picker |
+| `prompt(message, *, default, validate, password, caps=None, ...)` | single-line input |
+| `select(message, choices, *, default=0, caps=None, ...)` | single-choice picker |
+| `multiselect(message, choices, *, defaults=(), caps=None, ...)` | multi-choice picker |
 | `resolve_format(stream, *, tty_default, pipe_default)` | format chooser |
 | `format_examples([(cmd, desc), ...])` | argparse epilog |
-| `capabilities(stream=None)` | set of `{"unicode", "color", "emoji"}` |
-| `e(name, *, fallback=None)` | glyph lookup with ASCII fallback |
+| `capabilities(stream=None)` | set of `{"unicode", "color", "emoji"}` (only env-reading helper) |
+| `e(name, caps=None, *, fallback=None)` | glyph lookup with ASCII fallback; pass `caps` explicitly |
 
 ## Extension points
 

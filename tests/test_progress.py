@@ -216,12 +216,23 @@ def test_spinner_no_public_start_or_stop():
     assert not hasattr(sp, "stop")
 
 
-def test_spinner_ascii_fallback_when_no_unicode(monkeypatch):
-    monkeypatch.setenv("LANG", "C")
-    monkeypatch.setenv("TERM", "dumb")
+def test_spinner_ascii_fallback_when_no_caps():
+    # Explicit-config: with no caps passed, spinner picks ASCII frames.
     s = TTYStringIO()
     sp = Spinner("x", stream=s)
     assert sp.frames == ("|", "/", "-", "\\")
+
+
+def test_spinner_ascii_fallback_when_caps_lack_unicode():
+    s = TTYStringIO()
+    sp = Spinner("x", stream=s, caps={"color"})
+    assert sp.frames == ("|", "/", "-", "\\")
+
+
+def test_spinner_braille_when_caps_include_unicode():
+    s = TTYStringIO()
+    sp = Spinner("x", stream=s, caps={"unicode"})
+    assert sp.frames[0] == "⠋"
 
 
 def test_spinner_style_dots():

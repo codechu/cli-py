@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import sys
 import threading
-from typing import IO
+from typing import IO, Iterable
 
 from .._term import is_tty
-from ..emoji import capabilities
 from .line import ProgressLine
 from .styles_spinner import SPINNER_STYLES
 
@@ -23,6 +22,14 @@ class Spinner:
 
         with Spinner("Scanning…"):
             heavy_work()
+
+    Frame selection is fully explicit. When neither ``style`` nor
+    ``frames`` is given, ``caps`` decides: if it contains ``"unicode"``
+    braille frames are used, otherwise ASCII. ``caps`` defaults to
+    ``None`` (treated as no capabilities → ASCII). Pass
+    ``codechu_cli.capabilities(stream)`` from your bootstrap to enable
+    unicode glyphs — :class:`Spinner` does **not** read the environment
+    itself.
     """
 
     def __init__(
@@ -34,6 +41,7 @@ class Spinner:
         frames: tuple[str, ...] | list[str] | None = None,
         interval: float = 0.08,
         enabled: bool | None = None,
+        caps: Iterable[str] | None = None,
     ) -> None:
         self._stream = stream if stream is not None else sys.stderr
         self.message = message
@@ -50,8 +58,8 @@ class Spinner:
                     )
                 frames = SPINNER_STYLES[style]
             else:
-                caps = capabilities(self._stream)
-                frames = _BRAILLE_FRAMES if "unicode" in caps else _ASCII_FRAMES
+                cap_set = set(caps) if caps is not None else set()
+                frames = _BRAILLE_FRAMES if "unicode" in cap_set else _ASCII_FRAMES
         self.frames = tuple(frames)
         self._line = ProgressLine(self._stream, enabled=self.enabled)
         self._stop_evt = threading.Event()

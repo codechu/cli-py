@@ -1,10 +1,18 @@
-"""Confirmation, text, single-select, and multi-select prompts."""
+"""Confirmation, text, single-select, and multi-select prompts.
+
+All public prompts accept an optional ``caps`` parameter (a set of
+capability tokens — see :func:`codechu_cli.emoji.capabilities`). The
+prompts pass ``caps`` through to :func:`codechu_cli.emoji.e` so glyph
+choice is fully explicit. If ``caps`` is omitted, prompts render with
+ASCII fallbacks — they do **not** read the environment to discover
+capabilities.
+"""
 
 from __future__ import annotations
 
 import getpass
 import sys
-from typing import IO, Callable, Sequence
+from typing import IO, Callable, Iterable, Sequence
 
 from ._term import is_tty as _is_tty_helper
 from .emoji import e
@@ -112,6 +120,7 @@ def prompt(
     stream: IO[str] | None = None,
     in_stream: IO[str] | None = None,
     translate: Callable[[str], str] | None = None,
+    caps: Iterable[str] | None = None,
 ) -> str:
     """Ask for a single line of input.
 
@@ -159,7 +168,7 @@ def prompt(
             except ValueError as err:
                 try:
                     msg = t("Invalid input: {err}").format(err=err)
-                    stream.write(f"  {e('fail', stream=stream)} {msg}\n")
+                    stream.write(f"  {e('fail', caps)} {msg}\n")
                     stream.flush()
                 except Exception:
                     pass
@@ -187,6 +196,7 @@ def _numbered_select_fallback(
     stream: IO[str],
     in_stream: IO[str],
     t: Callable[[str], str] = _identity,
+    caps: Iterable[str] | None = None,
 ) -> object:
     stream.write(message + "\n")
     for i, (label, _) in enumerate(pairs, 1):
@@ -201,11 +211,12 @@ def _numbered_select_fallback(
             stream=stream,
             in_stream=in_stream,
             translate=t,
+            caps=caps,
         )
         try:
             idx = int(raw) - 1
         except ValueError:
-            stream.write(f"  {e('fail', stream=stream)} {t('not a number')}\n")
+            stream.write(f"  {e('fail', caps)} {t('not a number')}\n")
             stream.flush()
             if not _stream_is_tty(stream):
                 # Non-TTY won't get better input, bail.
@@ -214,7 +225,7 @@ def _numbered_select_fallback(
             continue
         if 0 <= idx < len(pairs):
             break
-        stream.write(f"  {e('fail', stream=stream)} {t('out of range')}\n")
+        stream.write(f"  {e('fail', caps)} {t('out of range')}\n")
         stream.flush()
         if not _stream_is_tty(stream):
             idx = default_idx
@@ -229,6 +240,7 @@ def _numbered_multiselect_fallback(
     stream: IO[str],
     in_stream: IO[str],
     t: Callable[[str], str] = _identity,
+    caps: Iterable[str] | None = None,
 ) -> list[object]:
     stream.write(message + " " + t("(comma-separated indices, blank = defaults)") + "\n")
     for i, (label, _) in enumerate(pairs, 1):
@@ -242,6 +254,7 @@ def _numbered_multiselect_fallback(
         stream=stream,
         in_stream=in_stream,
         translate=t,
+        caps=caps,
     )
     if not raw.strip():
         return [pairs[i][1] for i in sorted(default_set)]
@@ -334,13 +347,14 @@ def _render_select(
     *,
     first: bool,
     hint: str = "",
+    caps: Iterable[str] | None = None,
 ) -> None:
     if not first:
         # Move cursor up to the message line and clear lines below.
         stream.write(f"\x1b[{len(pairs) + 1}A")
     stream.write("\r\x1b[2K" + message + "\n")
     for i, (label, _) in enumerate(pairs):
-        marker = e("arrow", stream=stream) if i == cursor else " "
+        marker = e("arrow", caps) if i == cursor else " "
         stream.write(f"\r\x1b[2K  {marker} {label}\n")
     if first and hint:
         # Print the hint once below the list, then move back above it
@@ -359,13 +373,14 @@ def _render_multiselect(
     *,
     first: bool,
     hint: str = "",
+    caps: Iterable[str] | None = None,
 ) -> None:
     if not first:
         stream.write(f"\x1b[{len(pairs) + 1}A")
     stream.write("\r\x1b[2K" + message + "\n")
     for i, (label, _) in enumerate(pairs):
-        box = e("check_on", stream=stream) if i in selected else e("check_off", stream=stream)
-        pointer = e("arrow", stream=stream) if i == cursor else " "
+        box = e("check_on", caps) if i in selected else e("check_off", caps)
+        pointer = e("arrow", caps) if i == cursor else " "
         stream.write(f"\r\x1b[2K  {pointer} {box} {label}\n")
     if first and hint:
         stream.write(f"\r\x1b[2K{hint}\n")
@@ -382,6 +397,7 @@ def select(
     in_stream: IO[str] | None = None,
     keymap: dict[str, tuple[str, ...]] | None = None,
     translate: Callable[[str], str] | None = None,
+    caps: Iterable[str] | None = None,
 ) -> object:
     """Single-choice picker. Arrow keys on TTY, numbered fallback elsewhere.
 
@@ -404,7 +420,9 @@ def select(
     t = translate if translate is not None else _identity
 
     if not _raw_mode_available(stream, in_stream):
-        return _numbered_select_fallback(message, pairs, default_idx, stream, in_stream, t)
+        return _numbered_select_fallback(
+            message, pairs, default_idx, stream, in_stream, t, caps
+        )
 
     fd = in_stream.fileno()
     old = termios.tcgetattr(fd)
@@ -412,7 +430,7 @@ def select(
     hint = t("Use ↑↓ (or j/k) to move, Enter to select, q to cancel")
     try:
         tty.setcbreak(fd)
-        _render_select(stream, message, pairs, cursor, first=True, hint=hint)
+        _render_select(stream, message, pairs, cursor, first=True, hint=hint, caps=caps)
         while True:
             key = _read_raw_key(in_stream)
             action = _match_action(key, km)
@@ -426,7 +444,9 @@ def select(
                 break
             else:
                 continue
-            _render_select(stream, message, pairs, cursor, first=False, hint=hint)
+            _render_select(
+                stream, message, pairs, cursor, first=False, hint=hint, caps=caps
+            )
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
     return pairs[cursor][1]
@@ -441,6 +461,7 @@ def multiselect(
     in_stream: IO[str] | None = None,
     keymap: dict[str, tuple[str, ...]] | None = None,
     translate: Callable[[str], str] | None = None,
+    caps: Iterable[str] | None = None,
 ) -> list[object]:
     """Multi-choice picker. Space toggles, ``a`` select-all, enter confirms.
 
@@ -459,7 +480,9 @@ def multiselect(
     t = translate if translate is not None else _identity
 
     if not _raw_mode_available(stream, in_stream):
-        return _numbered_multiselect_fallback(message, pairs, default_set, stream, in_stream, t)
+        return _numbered_multiselect_fallback(
+            message, pairs, default_set, stream, in_stream, t, caps
+        )
 
     fd = in_stream.fileno()
     old = termios.tcgetattr(fd)
@@ -468,7 +491,9 @@ def multiselect(
     hint = t("Use space to toggle, a to select all, Enter to confirm, q to cancel")
     try:
         tty.setcbreak(fd)
-        _render_multiselect(stream, message, pairs, cursor, selected, first=True, hint=hint)
+        _render_multiselect(
+            stream, message, pairs, cursor, selected, first=True, hint=hint, caps=caps
+        )
         while True:
             key = _read_raw_key(in_stream)
             action = _match_action(key, km)
@@ -492,7 +517,9 @@ def multiselect(
                 break
             else:
                 continue
-            _render_multiselect(stream, message, pairs, cursor, selected, first=False, hint=hint)
+            _render_multiselect(
+                stream, message, pairs, cursor, selected, first=False, hint=hint, caps=caps,
+            )
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
     return [pairs[i][1] for i in sorted(selected)]
