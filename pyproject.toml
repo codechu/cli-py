@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64", "wheel"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -36,7 +36,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/codechu/cli-py"
-Repository = "https://github.com/codechu/cli-py"
+Source = "https://github.com/codechu/cli-py"
 Issues = "https://github.com/codechu/cli-py/issues"
 
 [tool.setuptools.packages.find]
