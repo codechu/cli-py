@@ -45,8 +45,10 @@ pip install codechu-cli
 - **`resolve_format` / `format_examples`** — argparse output-format helpers
 - **`emoji.capabilities` / `emoji.e`** — locale + terminal-aware glyph lookup
 
-Pure stdlib. POSIX-first. Linux/macOS for raw-mode pickers; numbered
-prompt fallback everywhere else (Windows, CI, pipes).
+Lightweight: stdlib plus two tiny Codechu siblings — `codechu-fmt` and
+`codechu-meter` — both stdlib-only themselves, no transitive deps.
+POSIX-first. Linux/macOS for raw-mode pickers; numbered prompt
+fallback everywhere else (Windows, CI, pipes).
 
 ## Quick examples
 
@@ -470,7 +472,7 @@ Companion libraries from the Codechu Python ecosystem:
 
 - Spinner glyph styles adapted from [cli-spinners](https://github.com/sindresorhus/cli-spinners)
 - ANSI escape conventions per ECMA-48
-- Inspiration from [rich](https://github.com/Textualize/rich) and [questionary](https://github.com/tmbo/questionary); codechu-cli stays stdlib-only with line-oriented output
+- Inspiration from [rich](https://github.com/Textualize/rich) and [questionary](https://github.com/tmbo/questionary); codechu-cli stays minimal (stdlib + two tiny Codechu siblings) with line-oriented output
 
 ## License
 
