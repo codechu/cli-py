@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codechu-cli"
-version = "0.1.0"
+version = "0.2.0"
 description = "Stdlib-only CLI primitives — colors, progress, prompts, spinners, emoji helpers — with consistent UX across Codechu tools."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -25,11 +25,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "Topic :: Terminals",
 ]
-dependencies = [
-    "codechu-fmt>=0.1,<0.2",
-    "codechu-meter>=0.1,<0.2",
-    "codechu-spark>=0.1,<0.2",
-]
+dependencies = []
 
 [project.optional-dependencies]
 dev = [

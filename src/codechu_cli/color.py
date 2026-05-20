@@ -1,24 +1,28 @@
-"""ANSI color helper with NO_COLOR + TTY detection."""
+"""ANSI color helper with a fluent palette API.
+
+Usage::
+
+    c = Color(sys.stdout)
+    c.low("ok")     # → "\\x1b[32mok\\x1b[0m" if color enabled, else "ok"
+    c.high("bad")
+
+Each palette key becomes a method on the instance via ``__getattr__``.
+Unknown keys raise :class:`AttributeError`.
+
+Color does **not** read environment variables (no ``NO_COLOR``
+auto-detection). The caller decides — pass ``enabled=False`` (or
+``True``) explicitly, or rely on ``stream.isatty()`` auto-detection
+(``enabled=None``, the default).
+"""
 
 from __future__ import annotations
 
-import os
-from typing import IO
+from typing import IO, Callable
+
+from ._term import is_tty
 
 
 class Color:
-    """ANSI color helper with ``NO_COLOR`` and TTY detection.
-
-    Usage::
-
-        c = Color(sys.stdout)
-        c("low", "ok")   # → "\\x1b[32mok\\x1b[0m" if color enabled, else "ok"
-
-    Pass ``palette={...}`` to merge custom codes onto :attr:`DEFAULT_PALETTE`.
-    Pass ``force=True`` / ``force=False`` to override TTY / NO_COLOR auto-detection.
-    Unknown codes pass the text through unchanged.
-    """
-
     DEFAULT_PALETTE: dict[str, str] = {
         "reset": "\033[0m",
         "dim": "\033[2m",
@@ -29,41 +33,51 @@ class Color:
         "info": "\033[36m",     # cyan
     }
 
-    # Backwards-compat alias — old callers used Color.PALETTE.
-    PALETTE = DEFAULT_PALETTE
-
     def __init__(
         self,
         stream: IO[str],
         *,
         palette: dict[str, str] | None = None,
-        force: bool | None = None,
+        enabled: bool | None = None,
     ) -> None:
-        # Merge: custom palette overrides + extends defaults.
         self._palette = {**self.DEFAULT_PALETTE, **(palette or {})}
         self._stream = stream
-        self._force = force  # None = auto-detect
+        if enabled is None:
+            enabled = is_tty(stream)
+        self._enabled = bool(enabled)
 
     @property
     def enabled(self) -> bool:
-        if self._force is not None:
-            return self._force
-        if os.environ.get("NO_COLOR"):
-            return False
-        isatty = getattr(self._stream, "isatty", None)
-        try:
-            return bool(isatty and isatty())
-        except Exception:
-            return False
+        return self._enabled
 
-    def __call__(self, code: str, text: str) -> str:
-        if not self.enabled:
+    def _wrap(self, code: str, text: str) -> str:
+        if not self._enabled:
             return text
         seq = self._palette.get(code)
         if seq is None:
             return text
         reset = self._palette.get("reset", self.DEFAULT_PALETTE["reset"])
         return f"{seq}{text}{reset}"
+
+    def __getattr__(self, name: str) -> Callable[[str], str]:
+        # Only invoked for missing attributes. Private attrs (starting
+        # with "_") should not be intercepted — raise normally.
+        if name.startswith("_"):
+            raise AttributeError(name)
+        # Use object.__getattribute__ to avoid recursion through __getattr__.
+        palette = object.__getattribute__(self, "_palette")
+        if name not in palette:
+            raise AttributeError(
+                f"{type(self).__name__!r} has no color {name!r}. "
+                f"Known: {sorted(palette)}"
+            )
+
+        def _apply(text: str, _code: str = name) -> str:
+            return self._wrap(_code, text)
+
+        _apply.__name__ = name
+        _apply.__qualname__ = f"Color.{name}"
+        return _apply
 
 
 __all__ = ["Color"]

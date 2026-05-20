@@ -6,6 +6,7 @@ import getpass
 import sys
 from typing import IO, Callable, Sequence
 
+from ._term import is_tty as _is_tty_helper
 from .emoji import e
 
 # Optional POSIX raw-mode imports — guarded so the module imports on Windows.
@@ -40,11 +41,7 @@ def _identity(s: str) -> str:
 
 
 def _stream_is_tty(stream: IO[str]) -> bool:
-    isatty = getattr(stream, "isatty", None)
-    try:
-        return bool(isatty and isatty())
-    except Exception:
-        return False
+    return _is_tty_helper(stream)
 
 
 def confirm(

@@ -1,6 +1,9 @@
 """codechu-cli — stdlib-only CLI primitives.
 
-Public API re-exports. See module docstrings for details.
+Public API. See module docstrings for details. Formatting / metering /
+sparkline helpers used to be re-exported here; they now live in their
+own packages — import directly from ``codechu_fmt``, ``codechu_meter``,
+and ``codechu_spark``.
 """
 
 from __future__ import annotations
@@ -24,28 +27,19 @@ from .progress import (
 )
 from .prompt import confirm, multiselect, prompt, select
 
-# Convenience re-exports so existing tests + casual users still find
-# the helpers at codechu_cli. Authoritative home is the sibling libs.
-from codechu_fmt import format_duration, format_rate, format_size
-from codechu_meter import ETAEstimator, RateEstimator, Stopwatch
-from codechu_spark import sparkline
-
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "BAR_STYLES",
     "Color",
-    "ETAEstimator",
     "LOGOS",
     "ProgressBar",
     "ProgressLine",
-    "RateEstimator",
     "SPINNER_FAMILIES",
     "SPINNER_STYLES",
     "STYLE_COMPATIBILITY",
     "STYLE_TAGS",
     "Spinner",
-    "Stopwatch",
     "__version__",
     "ascii_banner",
     "banner",
@@ -53,15 +47,11 @@ __all__ = [
     "confirm",
     "e",
     "emoji",
-    "format_duration",
     "format_examples",
-    "format_rate",
-    "format_size",
     "multiselect",
     "prompt",
     "register_bar_style",
     "register_spinner_style",
     "resolve_format",
     "select",
-    "sparkline",
 ]

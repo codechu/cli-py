@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import IO
 
+from ._term import is_tty
+
 
 def resolve_format(
     stream: IO[str],
@@ -12,20 +14,11 @@ def resolve_format(
     pipe_default: str = "json",
 ) -> str:
     """Pick a default output format based on whether ``stream`` is a TTY."""
-    isatty = getattr(stream, "isatty", None)
-    try:
-        return tty_default if isatty and isatty() else pipe_default
-    except Exception:
-        return pipe_default
+    return tty_default if is_tty(stream) else pipe_default
 
 
 def format_examples(examples: list[tuple[str, str]]) -> str:
-    """Format a list of ``(command, description)`` for argparse ``epilog``.
-
-    Renders an aligned ``Examples:`` block. Width of the command column
-    is the longest command + 2 spaces, capped at 60 to keep wrapping
-    sane on narrow terminals.
-    """
+    """Format a list of ``(command, description)`` for argparse ``epilog``."""
     if not examples:
         return ""
     longest = min(60, max(len(cmd) for cmd, _ in examples))

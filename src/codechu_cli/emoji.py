@@ -11,6 +11,8 @@ import os
 import sys
 from typing import IO
 
+from ._term import is_tty as _is_tty_helper
+
 # name -> (unicode glyph, ascii fallback)
 _GLYPHS: dict[str, tuple[str, str]] = {
     "ok": ("✓", "+"),               # ✓
@@ -27,16 +29,6 @@ _GLYPHS: dict[str, tuple[str, str]] = {
     "disk": ("\U0001f4be", "disk"),      # 💾
     "watch": ("\U0001f441", "watch"),    # 👁
 }
-
-
-def _is_tty(stream: IO[str] | None) -> bool:
-    if stream is None:
-        return False
-    isatty = getattr(stream, "isatty", None)
-    try:
-        return bool(isatty and isatty())
-    except Exception:
-        return False
 
 
 def capabilities(stream: IO[str] | None = None) -> set[str]:
@@ -58,7 +50,7 @@ def capabilities(stream: IO[str] | None = None) -> set[str]:
         caps.add("unicode")
 
     term = os.environ.get("TERM", "")
-    is_tty = _is_tty(stream)
+    is_tty = _is_tty_helper(stream)
     if "NO_COLOR" not in os.environ and is_tty and term != "dumb":
         caps.add("color")
 

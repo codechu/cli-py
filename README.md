@@ -18,7 +18,8 @@ pip install codechu-cli
 
 ## What it gives you
 
-- **`Color`** — ANSI palette with `NO_COLOR` + TTY detection
+- **`Color`** — ANSI palette with fluent methods (`c.low(...)`, `c.high(...)`)
+  and TTY auto-detection (does not read `NO_COLOR`; caller decides)
 - **`ProgressLine`** — single-line overwriting stderr progress
 - **`ProgressBar`** — bracketed bar with percent + counts
 - **`Spinner`** — threaded spinner (braille frames + ASCII fallback)
@@ -42,8 +43,8 @@ from codechu_cli import Color, banner
 banner("disk-cleaner", "1.2.0", mode="dry-run")
 
 c = Color(sys.stderr)
-print(c("low", "ok") + " scan complete")
-print(c("high", "ERR") + " refusing destructive op")
+print(c.low("ok") + " scan complete")
+print(c.high("ERR") + " refusing destructive op")
 ```
 
 ### Progress bar
@@ -51,7 +52,7 @@ print(c("high", "ERR") + " refusing destructive op")
 ```python
 from codechu_cli import ProgressBar
 
-bar = ProgressBar(total=100, width=30)
+bar = ProgressBar(100).width(30).style("claude").with_eta()
 for chunk in stream_chunks():
     process(chunk)
     bar.advance(1, label=chunk.name)
@@ -77,12 +78,12 @@ win — `style` just supplies defaults.
 from codechu_cli import ProgressBar, Spinner
 
 # Industry-standard
-ProgressBar(100, style="block")    # █░ — npm/cargo
-ProgressBar(100, style="ascii")    # #- — GitHub Actions
-ProgressBar(100, style="equals")   # =- — Docker
+ProgressBar(100).style("block")    # █░ — npm/cargo
+ProgressBar(100).style("ascii")    # #- — GitHub Actions
+ProgressBar(100).style("equals")   # =- — Docker
 
 # Codechu signature
-ProgressBar(100, style="codechu")  # ▰▱ — matches disk-cleaner UI
+ProgressBar(100).style("codechu")  # ▰▱ — matches disk-cleaner UI
 
 # Spinner styles — industry classics
 Spinner("…", style="dots")          # ⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏  braille (default)
@@ -116,16 +117,16 @@ Spinner("…", style="moon")          # 🌑🌒🌓🌔🌕🌖🌗🌘
 Spinner("…", style="clock")         # 🕐🕑🕒…
 
 # Fixed small-block (Claude Code-style polish — width baked in)
-ProgressBar(100, style="blocks")        # ▰▰▰▱▱   width=5
-ProgressBar(100, style="blocks-wide")   # 8 cells
-ProgressBar(100, style="claude")        # █░ at width=10
+ProgressBar(100).style("blocks")        # ▰▰▰▱▱   width=5
+ProgressBar(100).style("blocks-wide")   # 8 cells
+ProgressBar(100).style("claude")        # █░ at width=10
 
 # Subpixel-smooth — narrow bar that still shows fractional progress
-ProgressBar(100, style="smooth")        # 10-cell, 80 distinct stops
-ProgressBar(100, style="smooth-wide")   # 20-cell, 160 distinct stops
+ProgressBar(100).style("smooth")        # 10-cell, 80 distinct stops
+ProgressBar(100).style("smooth-wide")   # 20-cell, 160 distinct stops
 
-# Full override still works (style provides defaults; fill/empty/frames override)
-ProgressBar(100, style="block", fill="*")
+# Full override still works (style provides defaults; .fill()/.empty()/frames override)
+ProgressBar(100).style("block").fill("*")
 Spinner("…", style="dots", frames=["A", "B", "C"])
 ```
 
@@ -143,9 +144,9 @@ for introspection (e.g. for `--style` help text in a CLI).
 
 ### Timing helpers (sibling libraries)
 
-The timing primitives that used to live in `codechu_cli.timing` now
-live in three single-responsibility sibling libraries — pulled in
-automatically as dependencies:
+The timing primitives live in three single-responsibility sibling
+libraries. Starting with v0.2, `codechu-cli` no longer depends on
+them — import directly from the package you need:
 
 - [`codechu-fmt`](https://github.com/codechu/fmt-py) — human-readable
   formatters (`format_duration`, `format_rate`, `format_size`)
@@ -154,30 +155,27 @@ automatically as dependencies:
 - [`codechu-spark`](https://github.com/codechu/spark-py) — text
   visualizations (`sparkline`, `bar_chart`, `heatmap`)
 
-For convenience, the most common names are re-exported from
-`codechu_cli` so existing code keeps working:
-
 ```python
-from codechu_cli import format_duration  # → codechu-fmt
+from codechu_fmt import format_duration
 format_duration(90)                       # → '1m 30s'
 
-from codechu_cli import Stopwatch         # → codechu-meter
+from codechu_meter import Stopwatch
 with Stopwatch() as sw:
     do_work()
 print(sw)                                 # → '1m 30s'
 
-from codechu_cli import sparkline         # → codechu-spark
+from codechu_spark import sparkline
 sparkline([1, 3, 7, 2, 5])                # → '▁▃█▂▅'
 ```
 
-See each sibling library's README for the full API. `ProgressBar`'s
-`{elapsed}`, `{eta}`, `{rate}`, `{remaining}` template fields
-delegate to `codechu-fmt` and `codechu-meter` internally.
+`ProgressBar`'s `{elapsed}`, `{eta}`, `{rate}`, `{remaining}` template
+fields are computed by `ProgressBar` itself (no runtime dep on the
+sibling libs).
 
 Indeterminate mode — when you don't know the total upfront:
 
 ```python
-bar = ProgressBar(total=None)  # animated sliding bar
+bar = ProgressBar(None)  # animated sliding bar
 for chunk in stream:
     bar.advance()
 bar.set_total(known_total)     # switches to normal rendering
@@ -266,11 +264,11 @@ print(f"{e('arrow')} next step")    # "→ next step" or "-> next step"
 
 | Symbol | Purpose |
 |---|---|
-| `Color(stream)` | ANSI palette; respects `NO_COLOR` + `isatty()` |
+| `Color(stream, *, palette=None, enabled=None)` | ANSI palette with fluent methods (`c.low(...)`); TTY auto-detect |
 | `banner(title, version, *, mode=None, stream=...)` | TTY-only header |
 | `ProgressLine(stream=None, enabled=None)` | `.update()` / `.clear()` |
-| `ProgressBar(total, *, width=40, ...)` | `.advance(n, label)` / `.set_total(n)` / `.finish()` |
-| `Spinner(message, *, frames=None, interval=0.08)` | context manager + `.start()/.stop()` |
+| `ProgressBar(total, *, enabled=None)` | fluent builder: `.stream() .width() .style() .with_eta() .with_rate() .prefix() .suffix()`, then `.advance() / .set_total() / .finish()` |
+| `Spinner(message, *, frames=None, interval=0.08)` | context-manager only: `with Spinner(...): ...` |
 | `confirm(prompt, *, default, assume_yes, ...)` | yes/no |
 | `prompt(message, *, default, validate, password, ...)` | single-line input |
 | `select(message, choices, *, default=0, ...)` | single-choice picker |
@@ -289,17 +287,21 @@ brand or locale.
 ```python
 # Custom palette (merged onto defaults)
 c = Color(sys.stdout, palette={
-    "snap-edge":   "\033[35m",
-    "snap-stable": "\033[36m",
+    "snapedge":   "\033[35m",
+    "snapstable": "\033[36m",
 })
-print(c("snap-edge", "edge channel"))
+print(c.snapedge("edge channel"))
 
-# Force color on/off (override NO_COLOR + TTY detection)
-c = Color(sys.stdout, force=True)
+# Force color on/off (override TTY detection)
+c = Color(sys.stdout, enabled=True)
 
 # Custom progress bar look
-bar = ProgressBar(100, fill="█", empty="░",
-                  template="{bar} {pct}% · {elapsed} · ETA {eta}")
+bar = (
+    ProgressBar(100)
+    .fill("█")
+    .empty("░")
+    .template("{bar} {pct}% · {elapsed} · ETA {eta}")
+)
 for _ in range(100):
     bar.advance(label="working…")
 bar.finish()
