@@ -132,6 +132,62 @@ honestly.
 The full registries are exported as `SPINNER_STYLES` and `BAR_STYLES`
 for introspection (e.g. for `--style` help text in a CLI).
 
+### Timing helpers (sibling libraries)
+
+The timing primitives that used to live in `codechu_cli.timing` now
+live in three single-responsibility sibling libraries — pulled in
+automatically as dependencies:
+
+- [`codechu-fmt`](https://github.com/codechu/fmt-py) — human-readable
+  formatters (`format_duration`, `format_rate`, `format_size`)
+- [`codechu-meter`](https://github.com/codechu/meter-py) — measurement
+  primitives (`Stopwatch`, `RateEstimator`, `ETAEstimator`)
+- [`codechu-spark`](https://github.com/codechu/spark-py) — text
+  visualizations (`sparkline`, `bar_chart`, `heatmap`)
+
+For convenience, the most common names are re-exported from
+`codechu_cli` so existing code keeps working:
+
+```python
+from codechu_cli import format_duration  # → codechu-fmt
+format_duration(90)                       # → '1m 30s'
+
+from codechu_cli import Stopwatch         # → codechu-meter
+with Stopwatch() as sw:
+    do_work()
+print(sw)                                 # → '1m 30s'
+
+from codechu_cli import sparkline         # → codechu-spark
+sparkline([1, 3, 7, 2, 5])                # → '▁▃█▂▅'
+```
+
+See each sibling library's README for the full API. `ProgressBar`'s
+`{elapsed}`, `{eta}`, `{rate}`, `{remaining}` template fields
+delegate to `codechu-fmt` and `codechu-meter` internally.
+
+Indeterminate mode — when you don't know the total upfront:
+
+```python
+bar = ProgressBar(total=None)  # animated sliding bar
+for chunk in stream:
+    bar.advance()
+bar.set_total(known_total)     # switches to normal rendering
+```
+
+#### Complete catalog
+
+Spinner families currently shipped:
+
+- `classic` (7), `codechu` (2), `blocks` (5), `compact` (7), `grow` (2),
+  `pictographic` (2), `modern` (9), `chaos` (7), `random-access` (6),
+  `matrix` (4), `quadrant` (5), `conveyor` (4), `iconic` (5)
+- **`loading`** (3) — `bar`, `buffering`, `signal`
+- **`semantic`** (4) — `heartbeat`, `searching`, `atom`, `spiral`
+- **`outro`** (3) — `success-flash`, `error-pulse`, `retry-slow`
+
+Timing helpers live in sibling libs — see the "Timing helpers
+(sibling libraries)" section above.
+
 ### Confirm + prompt
 
 ```python
@@ -294,6 +350,57 @@ prompt("Yedek adı", validate=v, translate=_)
 
 This follows the STANDARDS.md §11 library carve-out: libraries accept a
 translator hook rather than shipping their own catalog.
+
+## Discover
+
+With 65 spinner styles, finding the right one is the hard part.
+
+```bash
+# Preview every style live
+python -m codechu_cli demo
+
+# Filter by family (13 families: classic, chaos, matrix, conveyor, …)
+python -m codechu_cli demo --family chaos
+
+# Filter by mood tag (calm, busy, chaotic, playful, minimal, narrow, wide)
+python -m codechu_cli demo --tag calm
+
+# Just list everything
+python -m codechu_cli list
+```
+
+Or programmatically:
+
+```python
+from codechu_cli import SPINNER_FAMILIES, STYLE_TAGS, STYLE_COMPATIBILITY
+
+print(SPINNER_FAMILIES["chaos"])
+# ['static', 'storm', 'sparks', 'fireworks', 'electricity', 'maelstrom', 'build-up']
+
+# Pick one safe for any terminal
+import random
+safe = STYLE_COMPATIBILITY["ascii-safe"]
+spinner_style = random.choice(list(safe))
+```
+
+You can also register your own at runtime:
+
+```python
+from codechu_cli import register_spinner_style, register_bar_style
+
+register_spinner_style(
+    "my-spin", ["◐", "◓", "◑", "◒"],
+    family="codechu", tags={"calm"},
+)
+register_bar_style("my-bar", fill="▰", empty="▱", width=10)
+```
+
+## Stability
+
+Style names (the keys in `SPINNER_STYLES`, `BAR_STYLES`) are part of the
+**public API**. Adding new names is non-breaking; removing or renaming
+requires a deprecation cycle (warn for one minor version, then remove
+on the next). Family names and tag names follow the same rule.
 
 ## License
 

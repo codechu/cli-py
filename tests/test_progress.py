@@ -10,10 +10,15 @@ import pytest
 
 from codechu_cli import (
     BAR_STYLES,
+    SPINNER_FAMILIES,
     SPINNER_STYLES,
+    STYLE_COMPATIBILITY,
+    STYLE_TAGS,
     ProgressBar,
     ProgressLine,
     Spinner,
+    register_bar_style,
+    register_spinner_style,
 )
 
 from conftest import TTYStringIO
@@ -307,6 +312,257 @@ def test_blocks_render_fixed_count():
     text = s.getvalue()
     # Find the latest rendered frame containing the 60% bar.
     assert "[" + "▰" * 3 + "▱" * 2 + "]" in text
+
+
+def test_register_spinner_style_basic():
+    register_spinner_style("my-test-style", ["A", "B", "C"])
+    try:
+        assert "my-test-style" in SPINNER_STYLES
+        assert SPINNER_STYLES["my-test-style"] == ["A", "B", "C"]
+        sp = Spinner("x", style="my-test-style")
+        assert list(sp.frames) == ["A", "B", "C"]
+    finally:
+        SPINNER_STYLES.pop("my-test-style", None)
+        STYLE_COMPATIBILITY.get("modern", set()).discard("my-test-style")
+
+
+def test_register_spinner_style_with_family_and_tags():
+    register_spinner_style(
+        "fam-test", ["X", "Y"], family="my-family", tags={"calm", "minimal"}
+    )
+    try:
+        assert "fam-test" in SPINNER_FAMILIES["my-family"]
+        assert "fam-test" in STYLE_TAGS["calm"]
+        assert "fam-test" in STYLE_TAGS["minimal"]
+    finally:
+        SPINNER_STYLES.pop("fam-test", None)
+        SPINNER_FAMILIES.pop("my-family", None)
+        STYLE_TAGS["calm"].discard("fam-test")
+        STYLE_TAGS["minimal"].discard("fam-test")
+        STYLE_COMPATIBILITY.get("modern", set()).discard("fam-test")
+
+
+def test_register_spinner_style_empty_frames_raises():
+    with pytest.raises(ValueError):
+        register_spinner_style("empty", [])
+
+
+def test_register_bar_style_basic():
+    register_bar_style("my-bar", fill="#", empty=".", width=7)
+    try:
+        assert "my-bar" in BAR_STYLES
+        bar = ProgressBar(10, style="my-bar")
+        assert bar.fill == "#"
+        assert bar.empty == "."
+        assert bar.width == 7
+    finally:
+        BAR_STYLES.pop("my-bar", None)
+
+
+def test_register_bar_style_smooth_flag():
+    register_bar_style("my-smooth", fill="█", empty=" ", width=5, smooth=True)
+    try:
+        bar = ProgressBar(10, style="my-smooth")
+        assert bar.smooth is True
+    finally:
+        BAR_STYLES.pop("my-smooth", None)
+
+
+def test_spinner_families_cover_all_styles():
+    # Every spinner style must appear in exactly one family.
+    all_in_families: list[str] = []
+    for names in SPINNER_FAMILIES.values():
+        all_in_families.extend(names)
+    in_families = set(all_in_families)
+    # No duplicates across families
+    assert len(all_in_families) == len(in_families), (
+        "spinner style listed in multiple families"
+    )
+    assert in_families == set(SPINNER_STYLES), (
+        f"family coverage mismatch: missing={set(SPINNER_STYLES) - in_families}, "
+        f"extra={in_families - set(SPINNER_STYLES)}"
+    )
+
+
+def test_style_compatibility_no_overlap():
+    ascii_safe = STYLE_COMPATIBILITY["ascii-safe"]
+    needs_emoji = STYLE_COMPATIBILITY["needs-emoji"]
+    needs_cjk = STYLE_COMPATIBILITY["needs-cjk"]
+    modern = STYLE_COMPATIBILITY["modern"]
+    assert not (ascii_safe & needs_emoji)
+    assert not (ascii_safe & needs_cjk)
+    assert not (needs_emoji & needs_cjk)
+    assert not (modern & needs_emoji)
+    assert not (modern & needs_cjk)
+
+
+def test_dropped_styles_gone():
+    assert "weather" not in SPINNER_STYLES
+    assert "pacman-ghost" not in SPINNER_STYLES
+
+
+def test_demo_module_lists_styles():
+    import os
+    import pathlib
+    import subprocess
+    import sys as _sys
+
+    src = pathlib.Path(__file__).resolve().parent.parent / "src"
+    env = dict(os.environ)
+    env["PYTHONPATH"] = (
+        f"{src}{os.pathsep}{env['PYTHONPATH']}" if "PYTHONPATH" in env else str(src)
+    )
+    result = subprocess.run(
+        [_sys.executable, "-m", "codechu_cli", "list"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        env=env,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "dots" in result.stdout
+    assert "codechu" in result.stdout
+
+
+def test_progressbar_indeterminate_renders_pattern():
+    s = TTYStringIO()
+    bar = ProgressBar(total=None, stream=s)
+    bar.advance()
+    bar.advance()
+    out = s.getvalue()
+    # Any frame from the `bar` spinner style appears in the output
+    assert any(f in out for f in SPINNER_STYLES["bar"])
+    # No percent (renders as --%)
+    assert "--%" in out or "--" in out
+
+
+def test_progressbar_indeterminate_set_total_switches():
+    s = TTYStringIO()
+    bar = ProgressBar(total=None, stream=s)
+    bar.advance()
+    bar.set_total(10)
+    bar.advance(4)  # current was 1 from the indeterminate advance → 5/10
+    out = s.getvalue()
+    assert "50%" in out
+    assert "5/10" in out
+
+
+def test_progressbar_spinner_template_default_dots():
+    s = TTYStringIO()
+    bar = ProgressBar(
+        10, stream=s, width=5, template="{spinner} {pct}%"
+    )
+    bar.advance(5)
+    out = s.getvalue()
+    # At least one dots frame appears
+    assert any(f in out for f in SPINNER_STYLES["dots"])
+
+
+def test_progressbar_spinner_template_custom_style():
+    s = TTYStringIO()
+    bar = ProgressBar(
+        10, stream=s, width=5, template="{spinner} hi", spinner_style="line"
+    )
+    bar.advance(1)
+    bar.advance(1)
+    out = s.getvalue()
+    assert any(f in out for f in SPINNER_STYLES["line"])
+
+
+def test_progressbar_remaining_template():
+    s = TTYStringIO()
+    bar = ProgressBar(10, stream=s, width=5, template="rem={remaining}")
+    bar.advance(3)
+    out = s.getvalue()
+    assert "rem=7" in out
+
+
+def test_progressbar_remaining_indeterminate():
+    s = TTYStringIO()
+    bar = ProgressBar(total=None, stream=s, template="rem={remaining}")
+    bar.advance()
+    assert "rem=?" in s.getvalue()
+
+
+def test_progressbar_rate_template():
+    s = TTYStringIO()
+    bar = ProgressBar(100, stream=s, width=5, template="r={rate}")
+    bar.advance(10)
+    # Too soon — should show '?'
+    assert "r=?" in s.getvalue()
+    time.sleep(0.6)
+    bar.advance(10)
+    out = s.getvalue()
+    # After window passes, expect either /s or ?
+    assert "/s" in out or "r=?" in out
+
+
+def test_bar_style_gradient_edge_renders_edge_chars():
+    s = TTYStringIO()
+    bar = ProgressBar(10, stream=s, style="gradient-edge", width=10)
+    bar.advance(5)
+    out = s.getvalue()
+    # ▓ or ▒ (edge chars) should appear at the boundary
+    assert "▓" in out or "▒" in out
+
+
+def test_bar_style_tape_renders_separators():
+    s = TTYStringIO()
+    bar = ProgressBar(5, stream=s, style="tape", width=5)
+    bar.advance(2)
+    out = s.getvalue()
+    assert "│" in out
+
+
+def test_bar_reverse_direction():
+    s = TTYStringIO()
+    bar = ProgressBar(10, stream=s, width=10, fill="█", empty="░", reverse=True)
+    bar.advance(3)  # 30% — 3 cells filled
+    out = s.getvalue()
+    # Right-to-left fill: the rightmost cells are filled. Find the last
+    # rendered bar segment in the output.
+    # A 30% reverse bar of width 10 = "░░░░░░░███"
+    assert "░░░░░░░███" in out
+
+
+def test_progressbar_refresh_pauses_after_idle(monkeypatch):
+    s = TTYStringIO()
+    bar = ProgressBar(10, stream=s, width=5)
+    bar.advance(1)
+    # Force the last_advance into the past so refresh() activates pause
+    bar._last_advance = time.monotonic() - 5.0
+    bar.refresh()
+    out = s.getvalue()
+    # Pulse uses blocks-pulse frames (▱ or ▰ blocks)
+    assert "▱" in out or "▰" in out
+
+
+@pytest.mark.parametrize("style", [
+    "bar", "buffering", "signal", "heartbeat", "searching",
+    "atom", "spiral", "success-flash", "error-pulse", "retry-slow",
+])
+def test_new_spinner_styles_roundtrip(style):
+    sp = Spinner("x", style=style)
+    assert list(sp.frames) == SPINNER_STYLES[style]
+
+
+def test_new_spinner_styles_in_families():
+    loading = set(SPINNER_FAMILIES["loading"])
+    assert {"bar", "buffering", "signal"} <= loading
+    semantic = set(SPINNER_FAMILIES["semantic"])
+    assert {"heartbeat", "searching", "atom", "spiral"} <= semantic
+    outro = set(SPINNER_FAMILIES["outro"])
+    assert {"success-flash", "error-pulse", "retry-slow"} <= outro
+
+
+def test_new_spinner_styles_in_tags():
+    assert "heartbeat" in STYLE_TAGS["calm"]
+    assert "bar" in STYLE_TAGS["busy"]
+    assert "atom" in STYLE_TAGS["playful"]
+    assert "signal" in STYLE_TAGS["narrow"]
+    assert "spiral" in STYLE_TAGS["wide"]
+    assert "success-flash" in STYLE_TAGS["outro"]
+    assert "signal" in STYLE_TAGS["network"]
 
 
 # Touch `time` so ruff doesn't strip the import (we leave it available

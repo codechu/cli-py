@@ -24,7 +24,11 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "Topic :: Terminals",
 ]
-dependencies = []
+dependencies = [
+    "codechu-fmt>=0.1,<0.2",
+    "codechu-meter>=0.1,<0.2",
+    "codechu-spark>=0.1,<0.2",
+]
 
 [project.optional-dependencies]
 dev = [

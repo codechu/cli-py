@@ -7,6 +7,9 @@ import threading
 import time
 from typing import IO
 
+from codechu_fmt import format_duration, format_rate
+from codechu_meter import RateEstimator
+
 from .emoji import capabilities
 
 _BRAILLE_FRAMES = ("⠋", "⠙", "⠹", "⠸", "⠼",
@@ -68,7 +71,6 @@ SPINNER_STYLES: dict[str, list[str]] = {
     # Pictographic — for fun / dev-mode banners; emoji-only terminals
     "earth":   ["🌍", "🌎", "🌏"],
     "moon":    ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"],
-    "weather": ["☀ ", "☀☁", "☁☁", "☁🌧", "🌧🌧", "🌧☁", "☁☀", " ☀"],
 
     # --- Striking / modern ---------------------------------------------
     # comet: solid head with fading tail, wraps around 8 cells
@@ -313,12 +315,6 @@ SPINNER_STYLES: dict[str, list[str]] = {
         "• • • o  ", "• • • C  ", "• • o    ", "• • C    ",
         "• o      ", "• C      ", "o        ", "C        ",
     ],
-    # pacman-ghost: pacman fleeing while ghost chases — adversarial
-    "pacman-ghost": [
-        "C  ᗣ    ", " C  ᗣ   ", "  C  ᗣ  ", "   C  ᗣ ",
-        "    C  ᗣ", "ᗣ    C  ", " ᗣ    C ", "  ᗣ    C",
-    ],
-
     # game-of-life: sparse cells evolving — not real CA, but the
     # emergent visual feel of Conway's Game of Life
     "game-of-life": [
@@ -336,6 +332,62 @@ SPINNER_STYLES: dict[str, list[str]] = {
     # (the simplest GoL oscillator); rendered with half-blocks
     "life-blinker": [
         "▄▄▄ ", "    ", " ▌  ", "    ", "▄▄▄ ", "    ",
+    ],
+
+    # --- Loading / connection (universal expectations) ---------------
+    # bar: sliding indeterminate bar inside brackets — the npm/yarn/cargo
+    # "loading" archetype every user expects
+    "bar": [
+        "[▓▓▓░░░░░]", "[░▓▓▓░░░░]", "[░░▓▓▓░░░]", "[░░░▓▓▓░░]",
+        "[░░░░▓▓▓░]", "[░░░░░▓▓▓]", "[░░░░▓▓▓░]", "[░░░▓▓▓░░]",
+        "[░░▓▓▓░░░]", "[░▓▓▓░░░░]",
+    ],
+    # buffering: dot grows in the middle, then shrinks
+    "buffering": [
+        "[░░▓░░]", "[░▓▓▓░]", "[▓▓▓▓▓]", "[▓▓▓▓▓]",
+        "[░▓▓▓░]", "[░░▓░░]", "[░░░░░]",
+    ],
+    # signal: 4 vertical bars filling up — cell tower / wifi
+    "signal": [
+        "▁   ", "▁▂  ", "▁▂▃ ", "▁▂▃▄",
+        "▁▂▃ ", "▁▂  ", "▁   ", "    ",
+    ],
+
+    # --- Semantic / situational ----------------------------------------
+    # heartbeat: ECG blip on a flat line — health-check, keepalive
+    "heartbeat": [
+        "─────────", "──── ────", "───▁ ────", "──▁▃ ────",
+        "─▁▃█▃▁───", "──▁▃ ────", "───▁ ────", "─────────",
+        "─────────", "─────────",
+    ],
+    # searching: magnifier sweeping right then resetting
+    "searching": [
+        "🔍       ", " 🔍      ", "  🔍     ", "   🔍    ",
+        "    🔍   ", "     🔍  ", "      🔍 ", "       🔍",
+    ],
+    # atom: 3 electrons orbiting a nucleus (visual: which one is "lit")
+    "atom": [
+        "●○○○", "○●○○", "○○●○", "○○○●",
+        "○○●○", "○●○○",
+    ],
+    # spiral: arm of a galaxy building up, then collapsing
+    "spiral": [
+        "╲    ", "╲╲   ", "╲╲╲  ", "╲╲╲╲ ", "╲╲╲╲╲",
+        " ╲╲╲╲", "  ╲╲╲", "   ╲╲", "    ╲", "     ",
+    ],
+
+    # --- One-shot outro frames (intended for animate-once contexts) ---
+    # success-flash: ✓ flash that fades to clean
+    "success-flash": [
+        "  ✓  ", " ✓✓✓ ", "✓✓✓✓✓", " ✓✓✓ ", "  ✓  ", "     ",
+    ],
+    # error-pulse: ✗ pulsing — failure rhythm (distinct from spinner)
+    "error-pulse": [
+        "  ✗  ", " ✗✗✗ ", "✗✗✗✗✗", " ✗✗✗ ", "  ✗  ", "  ·  ",
+    ],
+    # retry-slow: long quiet braille pulse — "I'm trying again, patience"
+    "retry-slow": [
+        "⠁  ", " ⠂ ", "  ⠄", "  ⠠", " ⠐ ", "⠈  ",
     ],
 }
 
@@ -365,9 +417,146 @@ BAR_STYLES: dict[str, dict] = {
     # Subpixel-smooth: narrow bars that render fractional progress via eighths
     "smooth":      {"fill": "█", "empty": " ", "width": 10, "smooth": True},
     "smooth-wide": {"fill": "█", "empty": " ", "width": 20, "smooth": True},
+
+    # Gradient boundary — soft transition from fill to empty instead of a
+    # hard cut. ``edge`` chars render at the boundary cell, in order.
+    "gradient-edge": {"fill": "█", "empty": "░", "edge": "▓▒"},
+    # Discrete cells with separators between every cell.
+    "tape":          {"fill": "▰", "empty": "░", "separator": "│"},
 }
 
 DEFAULT_BAR_STYLE = "ascii"
+
+
+SPINNER_FAMILIES: dict[str, list[str]] = {
+    "classic":      ["dots", "dots2", "line", "arc", "pulse", "bouncing", "clock"],
+    "codechu":      ["codechu", "codechu-fade"],
+    "blocks":       ["blocks-bounce", "blocks-fill", "blocks-snake",
+                     "blocks-pulse", "blocks-fill-solid"],
+    "compact":      ["dots3", "wave3", "tri3", "arrow3",
+                     "toggle", "toggle-sq", "toggle-rd"],
+    "grow":         ["grow-h", "grow-v"],
+    "pictographic": ["earth", "moon"],
+    "modern":       ["comet", "wave", "pulse-radial", "equalizer", "ripple",
+                     "orbit-quad", "shimmer", "glitch", "double-bounce"],
+    "chaos":        ["static", "storm", "sparks", "fireworks",
+                     "electricity", "maelstrom", "build-up"],
+    "random-access": ["scatter", "multi-seek", "disk-thrash", "hash-spray",
+                      "rand-walk", "gather"],
+    "matrix":       ["matrix", "matrix-rain", "matrix-drop", "matrix-trail"],
+    "quadrant":     ["quad-random", "quad-twinkle", "quad-pulse",
+                     "quad-rain", "quad-cross"],
+    "conveyor":     ["conveyor", "conveyor-fast", "conveyor-mixed", "pipeline"],
+    "iconic":       ["pacman", "pacman-reverse",
+                     "game-of-life", "life-glider", "life-blinker"],
+    "loading":      ["bar", "buffering", "signal"],
+    "semantic":     ["heartbeat", "searching", "atom", "spiral"],
+    "outro":        ["success-flash", "error-pulse", "retry-slow"],
+}
+
+STYLE_TAGS: dict[str, set[str]] = {
+    # mood tags — pick semantic intent
+    "calm":    {"dots3", "moon", "codechu-fade", "pulse-radial",
+                "life-glider", "life-blinker", "grow-h", "grow-v", "arc",
+                "heartbeat", "retry-slow", "signal"},
+    "busy":    {"wave", "equalizer", "blocks-snake", "blocks-fill",
+                "conveyor", "conveyor-fast", "comet", "ripple",
+                "bar", "buffering", "searching"},
+    "chaotic": {"static", "storm", "sparks", "fireworks",
+                "electricity", "maelstrom", "glitch", "quad-random"},
+    "playful": {"pacman", "pacman-reverse", "earth", "moon", "clock",
+                "atom", "spiral"},
+    "minimal": {"toggle", "toggle-sq", "toggle-rd", "dots3",
+                "tri3", "orbit-quad", "life-glider"},
+    "narrow":  {"toggle", "toggle-sq", "toggle-rd", "dots", "dots2",
+                "line", "arc", "pulse", "grow-h", "grow-v",
+                "matrix", "matrix-drop", "matrix-trail",
+                "earth", "moon", "clock",
+                "signal", "atom", "success-flash", "error-pulse",
+                "retry-slow"},  # 1-cell wide
+    "wide":    {"matrix-rain", "conveyor-mixed", "pipeline",
+                "blocks-fill-solid", "multi-seek", "disk-thrash",
+                "bar", "buffering", "heartbeat", "searching",
+                "spiral"},  # 6+ cells
+    "outro":   {"success-flash", "error-pulse"},
+    "network": {"signal", "bar", "retry-slow"},
+}
+
+STYLE_COMPATIBILITY: dict[str, set[str]] = {
+    # Guaranteed to render anywhere — ASCII-only or universal blocks
+    "ascii-safe": {"line", "dots3", "ascii", "equals", "pipe"},
+
+    # Modern terminal with monospace Unicode font (JetBrains, Cascadia,
+    # DejaVu, Fira). Default tier — most styles fall here. Filled below.
+    "modern": set(),
+
+    # Needs emoji-presentation support; degrades to tofu/misalign on
+    # legacy terminals
+    "needs-emoji": {"clock", "earth", "moon", "electricity",
+                    "sparks", "fireworks"},
+
+    # Needs CJK font fallback for half-width katakana
+    "needs-cjk": {"matrix", "matrix-rain"},
+
+    # Bar styles
+    "ascii-safe-bar": {"ascii", "equals", "pipe"},
+}
+
+# Populate the "modern" tier — every spinner not already covered by
+# ascii-safe / needs-emoji / needs-cjk.
+STYLE_COMPATIBILITY["modern"] = (
+    set(SPINNER_STYLES)
+    - STYLE_COMPATIBILITY["needs-emoji"]
+    - STYLE_COMPATIBILITY["needs-cjk"]
+    - STYLE_COMPATIBILITY["ascii-safe"]
+)
+
+
+def register_spinner_style(
+    name: str,
+    frames: list[str],
+    *,
+    family: str | None = None,
+    tags: set[str] | None = None,
+    compatibility: str = "modern",
+) -> None:
+    """Register a custom spinner style at runtime.
+
+    ``family`` adds the name to ``SPINNER_FAMILIES[family]`` (creating
+    the family if missing). ``tags`` adds the name to each
+    ``STYLE_TAGS[tag]`` set. ``compatibility`` adds to
+    ``STYLE_COMPATIBILITY[compatibility]``.
+    """
+    if not frames:
+        raise ValueError("frames cannot be empty")
+    SPINNER_STYLES[name] = list(frames)
+    if family:
+        SPINNER_FAMILIES.setdefault(family, []).append(name)
+    if tags:
+        for tag in tags:
+            STYLE_TAGS.setdefault(tag, set()).add(name)
+    STYLE_COMPATIBILITY.setdefault(compatibility, set()).add(name)
+
+
+def register_bar_style(
+    name: str,
+    *,
+    fill: str | None = None,
+    empty: str | None = None,
+    width: int | None = None,
+    smooth: bool = False,
+) -> None:
+    """Register a custom progress bar style at runtime."""
+    spec: dict[str, object] = {}
+    if fill is not None:
+        spec["fill"] = fill
+    if empty is not None:
+        spec["empty"] = empty
+    if width is not None:
+        spec["width"] = width
+    if smooth:
+        spec["smooth"] = True
+    BAR_STYLES[name] = spec
 
 # Eighths ramp used by smooth rendering (9 stops: 0/8 .. 8/8).
 SUBPIXEL = " ▏▎▍▌▋▊▉█"
@@ -417,15 +606,9 @@ class ProgressLine:
         self._last_width = 0
 
 
-def _fmt_duration(seconds: float) -> str:
-    """Render a duration as ``Xs`` or ``Xm Ys`` (rounded to whole seconds)."""
-    if seconds < 0 or seconds != seconds:  # NaN guard
-        return "?"
-    s = int(round(seconds))
-    if s < 60:
-        return f"{s}s"
-    m, rem = divmod(s, 60)
-    return f"{m}m {rem}s"
+# Back-compat alias: prior to 0.1.0 the inline ``_fmt_duration`` helper
+# was used directly; route through :func:`timing.format_duration`.
+_fmt_duration = format_duration
 
 
 class ProgressBar:
@@ -446,7 +629,7 @@ class ProgressBar:
 
     def __init__(
         self,
-        total: int,
+        total: int | None = None,
         *,
         stream: IO[str] | None = None,
         width: int | None = None,
@@ -456,9 +639,18 @@ class ProgressBar:
         smooth: bool | None = None,
         template: str | None = None,
         enabled: bool | None = None,
+        spinner_style: str | None = None,
+        units: str | None = None,
+        reverse: bool = False,
     ) -> None:
         self._stream = stream if stream is not None else sys.stderr
-        self.total = max(0, int(total))
+        # total=None (or non-positive) → indeterminate mode
+        if total is None or int(total) <= 0:
+            self.total = 0
+            self._indeterminate = True
+        else:
+            self.total = int(total)
+            self._indeterminate = False
         self.current = 0
         if style is not None and style not in BAR_STYLES:
             raise KeyError(
@@ -468,24 +660,58 @@ class ProgressBar:
         preset = BAR_STYLES[style if style is not None else DEFAULT_BAR_STYLE]
         self.fill = fill if fill is not None else preset.get("fill", "#")
         self.empty = empty if empty is not None else preset.get("empty", "-")
+        self.edge = preset.get("edge")
+        self.separator = preset.get("separator")
         resolved_width = width if width is not None else preset.get("width", 40)
         # Allow narrow fixed-block presets (5–8 cells); only floor if the
         # caller passed something nonsensical with the default ascii preset.
         self.width = max(1, int(resolved_width))
         self.smooth = bool(smooth if smooth is not None else preset.get("smooth", False))
         self.template = template if template is not None else self.DEFAULT_TEMPLATE
+        self.reverse = bool(reverse)
+        self.units = units
+        if spinner_style is not None and spinner_style not in SPINNER_STYLES:
+            raise KeyError(
+                f"unknown spinner style {spinner_style!r}. "
+                f"Available: {sorted(SPINNER_STYLES)}"
+            )
+        # Default to "dots" for {spinner} field when no explicit style.
+        self._spinner_style = spinner_style if spinner_style is not None else "dots"
+        self._spinner_idx = 0
+        self._indeterm_idx = 0
         if enabled is None:
             enabled = _stream_is_tty(self._stream)
         self.enabled = enabled
         self._line = ProgressLine(self._stream, enabled=self.enabled)
         self._t_start = time.monotonic()
+        self._last_advance = time.monotonic()
+        self._rate = RateEstimator(window_seconds=1.0)
 
     def set_total(self, n: int) -> None:
         self.total = max(0, int(n))
+        self._indeterminate = self.total <= 0
         self._render(label="")
 
     def advance(self, n: int = 1, label: str = "") -> None:
-        self.current = min(self.total, self.current + n) if self.total else self.current + n
+        if self._indeterminate:
+            # Animation tick only — still update current for accounting.
+            self.current += n
+            self._indeterm_idx += 1
+        else:
+            self.current = (
+                min(self.total, self.current + n) if self.total else self.current + n
+            )
+        if n:
+            self._rate.observe(n)
+        self._last_advance = time.monotonic()
+        self._render(label=label)
+
+    def refresh(self, label: str = "") -> None:
+        """Re-render the current state without advancing.
+
+        For long-idle bars, call this periodically so the auto-paused
+        pulse animation activates (after 2 s of inactivity).
+        """
         self._render(label=label)
 
     def _render_smooth(self, frac: float) -> str:
@@ -502,33 +728,104 @@ class ProgressBar:
             out += " " * (self.width - full_cells - 1)
         return out
 
+    def _render_cells(self, ratio: float) -> str:
+        """Determinate-mode bar body: fill/empty cells with optional
+        gradient ``edge`` and ``separator``."""
+        filled = int(round(ratio * self.width))
+        filled = max(0, min(self.width, filled))
+        if self.smooth:
+            return self._render_smooth(ratio)
+        cells: list[str] = [self.fill] * filled + [self.empty] * (self.width - filled)
+        # Apply edge gradient: replace cells just past the fill boundary
+        # with progressively-fainter ``edge`` chars.
+        if self.edge and 0 < filled < self.width:
+            for i, ch in enumerate(self.edge):
+                pos = filled + i
+                if pos >= self.width:
+                    break
+                cells[pos] = ch
+        if self.reverse:
+            cells = list(reversed(cells))
+        if self.separator:
+            return self.separator.join(cells)
+        return "".join(cells)
+
+    def _indeterminate_body(self) -> str:
+        """Sliding pattern from the ``bar`` spinner style."""
+        frames = SPINNER_STYLES["bar"]
+        return frames[self._indeterm_idx % len(frames)]
+
+    def _paused_body(self) -> str:
+        """Pulse animation for long-idle bars."""
+        frames = SPINNER_STYLES["blocks-pulse"]
+        # Fit width by repeating/truncating
+        f = frames[self._indeterm_idx % len(frames)]
+        if len(f) >= self.width:
+            return f[: self.width]
+        return (f * ((self.width // len(f)) + 1))[: self.width]
+
     def _render(self, *, label: str) -> None:
         if not self.enabled:
             return
-        total = self.total or 1
-        ratio = min(1.0, self.current / total) if total else 0.0
-        if self.smooth:
-            bar_str = self._render_smooth(ratio)
-        else:
-            filled = int(round(ratio * self.width))
-            # Repeat fill/empty strings; clamp if a multi-char glyph would
-            # overflow due to int rounding edges.
-            bar_str = (self.fill * filled) + (self.empty * (self.width - filled))
-        pct = int(round(ratio * 100))
-        elapsed = time.monotonic() - self._t_start
-        if self.total > 0 and self.current > 0:
-            eta_s = elapsed * (self.total - self.current) / self.current
-            eta_str = _fmt_duration(max(0.0, eta_s))
-        else:
+        now = time.monotonic()
+        elapsed = now - self._t_start
+        idle = now - self._last_advance
+        # Indeterminate body
+        if self._indeterminate:
+            bar_str = self._indeterminate_body()
+            pct_str = "--"
             eta_str = "?"
+            remaining_str = "?"
+            ratio = 0.0
+        elif idle > 2.0:
+            # Auto-paused: replace bar with pulse, keep counters.
+            self._indeterm_idx += 1
+            bar_str = self._paused_body()
+            total = self.total or 1
+            ratio = min(1.0, self.current / total) if total else 0.0
+            pct_str = str(int(round(ratio * 100)))
+            if self.total > 0 and self.current > 0:
+                eta_s = elapsed * (self.total - self.current) / self.current
+                eta_str = format_duration(max(0.0, eta_s))
+            else:
+                eta_str = "?"
+            remaining_str = str(max(0, self.total - self.current))
+        else:
+            total = self.total or 1
+            ratio = min(1.0, self.current / total) if total else 0.0
+            bar_str = self._render_cells(ratio)
+            pct_str = str(int(round(ratio * 100)))
+            if self.total > 0 and self.current > 0:
+                eta_s = elapsed * (self.total - self.current) / self.current
+                eta_str = format_duration(max(0.0, eta_s))
+            else:
+                eta_str = "?"
+            remaining_str = str(max(0, self.total - self.current))
+
+        # {spinner} frame
+        spin_frames = SPINNER_STYLES[self._spinner_style]
+        spinner_str = spin_frames[self._spinner_idx % len(spin_frames)]
+        self._spinner_idx += 1
+
+        # {rate}
+        if self._indeterminate or elapsed < 0.5 or self._rate.rate() <= 0:
+            rate_str = "?"
+        else:
+            rate_str = format_rate(
+                self._rate.rate(), unit=self.units if self.units else "items"
+            )
+
         msg = self.template.format(
             bar=bar_str,
-            pct=pct,
+            pct=pct_str,
             current=self.current,
             total=self.total,
             label=label,
-            elapsed=_fmt_duration(elapsed),
+            elapsed=format_duration(elapsed),
             eta=eta_str,
+            spinner=spinner_str,
+            remaining=remaining_str,
+            rate=rate_str,
         )
         # Trim trailing " · " when the default template ran with an
         # empty label, matching prior behavior.
@@ -630,8 +927,13 @@ __all__ = [
     "DEFAULT_SPINNER_STYLE",
     "ProgressBar",
     "ProgressLine",
+    "SPINNER_FAMILIES",
     "SPINNER_STYLES",
+    "STYLE_COMPATIBILITY",
+    "STYLE_TAGS",
     "Spinner",
+    "register_bar_style",
+    "register_spinner_style",
 ]
 
 

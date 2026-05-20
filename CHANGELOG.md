@@ -28,3 +28,25 @@
 - `emoji.register()`, `emoji.update()`, `emoji.known()` — runtime glyph extension
 - Spinner/ProgressBar named style presets (industry-standard + Codechu signature)
 - Fixed-block (`blocks`, `claude`) + subpixel (`smooth`) ProgressBar styles
+- `SPINNER_FAMILIES`, `STYLE_TAGS`, `STYLE_COMPATIBILITY` metadata registries
+- `register_spinner_style()` / `register_bar_style()` runtime extension
+- `python -m codechu_cli demo|list` preview CLI (filter by `--family`/`--tag`)
+- 10 spinner styles in 3 new families (loading, semantic, outro):
+  `bar`, `buffering`, `signal`, `heartbeat`, `searching`, `atom`,
+  `spiral`, `success-flash`, `error-pulse`, `retry-slow`
+- `ProgressBar` indeterminate mode — pass `total=None` for an animated
+  sliding bar; `set_total(n)` switches to normal rendering
+- `ProgressBar` template fields `{spinner}`, `{remaining}`, `{rate}`
+- `ProgressBar` `gradient-edge` and `tape` bar styles
+- `ProgressBar` `reverse=True` — fills right-to-left
+- `ProgressBar.refresh()` — re-render current state; activates an
+  auto-paused pulse after 2 s of idle
+- Refactor: timing helpers split into sibling libraries —
+  `codechu-fmt` (formatters), `codechu-meter` (measurement),
+  `codechu-spark` (visualization). Convenience re-exports retained
+  in `codechu_cli` for casual usage.
+
+### Stability
+
+- Style, family, and tag names are part of the public API. Removal or
+  rename requires a one-minor-version deprecation cycle.
