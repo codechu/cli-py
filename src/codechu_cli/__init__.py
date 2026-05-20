@@ -10,9 +10,11 @@ from __future__ import annotations
 
 from . import emoji
 from .banner import LOGOS, ascii_banner, banner
+from .box import box
 from .color import Color
 from .emoji import capabilities, e
 from .format import format_examples, resolve_format
+from .markdown import render_markdown
 from .progress import (
     BAR_STYLES,
     SPINNER_FAMILIES,
@@ -26,8 +28,9 @@ from .progress import (
     register_spinner_style,
 )
 from .prompt import confirm, multiselect, prompt, select
+from .table import Table
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     "BAR_STYLES",
@@ -40,9 +43,11 @@ __all__ = [
     "STYLE_COMPATIBILITY",
     "STYLE_TAGS",
     "Spinner",
+    "Table",
     "__version__",
     "ascii_banner",
     "banner",
+    "box",
     "capabilities",
     "confirm",
     "e",
@@ -52,6 +57,7 @@ __all__ = [
     "prompt",
     "register_bar_style",
     "register_spinner_style",
+    "render_markdown",
     "resolve_format",
     "select",
 ]

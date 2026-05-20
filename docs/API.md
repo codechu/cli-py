@@ -1,4 +1,4 @@
-# API Reference — codechu-cli 0.2.0
+# API Reference — codechu-cli 0.3.0
 
 Complete reference for every public symbol exported from `codechu_cli`.
 
@@ -21,6 +21,8 @@ from codechu_cli import (
     BAR_STYLES, SPINNER_STYLES, SPINNER_FAMILIES,
     STYLE_TAGS, STYLE_COMPATIBILITY,
     register_bar_style, register_spinner_style,
+    # widgets (0.3.0)
+    Table, box, render_markdown,
     # meta
     __version__,
 )
@@ -687,6 +689,150 @@ If you need the public capability set (color, emoji), use
 
 ---
 
+## Module: `table` (0.3.0)
+
+### `class Table`
+
+ASCII table widget with pluggable styles, per-column alignment, and
+caller-supplied color callbacks. Auto-computes column widths from
+content (ANSI escapes are excluded from width calculations so coloring
+never inflates the layout).
+
+```python
+Table(headers: list[str], *, width: int | None = None)
+```
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `headers` | `list[str]` | — | Column headers; sets the column count. |
+| `width` | `int \| None` | `None` | Optional total-width cap. When set, the widest column is shrunk first. |
+
+All builder methods return `self` so calls can be chained.
+
+#### `.add_row(values: list[str]) -> Table`
+
+Append a row. Values are pre-formatted strings — the table does not
+format numbers, sizes, etc. Rows shorter than the header count are
+padded with `""`; longer rows are truncated.
+
+#### `.align(col: int, mode: Literal["left", "right", "center"]) -> Table`
+
+Set the alignment for column `col`. Raises `IndexError` if `col` is
+out of range, `ValueError` for unknown modes. Default alignment is
+`"left"`.
+
+#### `.style(name: str) -> Table`
+
+Pluggable style:
+
+| Name | Borders | Use |
+|---|---|---|
+| `"plain"` | None — columns separated by `"  "` (two spaces). | Default; pipeable. |
+| `"box"` | `┌─┬─┐ │ ├─┼─┤ └─┴─┘`. | TTY-friendly. |
+| `"github"` | `\| --- \|` markdown. Alignment becomes `:---`, `---:`, `:---:`. | README tables. |
+
+Raises `ValueError` for unknown names.
+
+#### `.color_col(col: int, fn: Callable[[str], str]) -> Table`
+
+Apply `fn` to every cell value in column `col` at render time. Useful
+for severity coloring:
+
+```python
+t.color_col(2, c.high)  # color the "Risk" column red
+```
+
+The table strips ANSI sequences when computing column widths, so
+coloring never breaks layout. **Does not read env vars** — coloring
+is entirely the caller's choice.
+
+#### `.__str__() -> str`
+
+Render the table. Multi-line; no trailing newline.
+
+#### Example
+
+```python
+t = Table(["File", "Size", "Risk"])
+t.add_row(["foo.log", "1.2 GB", "high"])
+t.add_row(["bar.tmp", "30 MB",  "low"])
+t.align(1, "right")
+t.color_col(2, c.high)
+print(t.style("box"))
+```
+
+---
+
+## Module: `box` (0.3.0)
+
+### `box(text, *, style="single", title=None, padding=1) -> str`
+
+Wrap multi-line text in a Unicode border box and return the rendered
+string (caller prints).
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `text` | `str` | — | Multi-line input. `\n` separates lines. |
+| `style` | `str` | `"single"` | Border style — see below. |
+| `title` | `str \| None` | `None` | If set, inset into the top border. |
+| `padding` | `int` | `1` | Horizontal padding (spaces) inside the box per side. Must be `>= 0`. |
+
+Styles:
+
+| Name | Glyphs |
+|---|---|
+| `"single"` | `┌─┐ │ └─┘` |
+| `"double"` | `╔═╗ ║ ╚═╝` |
+| `"rounded"` | `╭─╮ │ ╰─╯` |
+
+Width auto-fits to the longest line (plus padding); ANSI escapes are
+excluded from length calculations. Raises `ValueError` for unknown
+styles or negative padding.
+
+```python
+print(box("Refusing destructive op.\nUse --force.", style="rounded", title="error"))
+```
+
+---
+
+## Module: `markdown` (0.3.0)
+
+### `render_markdown(text, *, color=None, enabled=None) -> str`
+
+Render a tiny Markdown subset to an ANSI-styled string. Intended for
+help text, error messages, and short docs — not a full Markdown engine.
+
+Supported tokens:
+
+| Token | Result |
+|---|---|
+| `# H1` | Bold + cyan |
+| `## H2` | Bold |
+| `**bold**` | Bold (uses `Color.bold` if a `Color` is passed) |
+| `*italic*` | Italic (ANSI `\x1b[3m`) |
+| `` `code` `` | Cyan (uses `Color.info`) |
+| `- item` / `* item` | Bullet `•` |
+| `[text](url)` | `text (url)` with bold/dim accents |
+
+Plain text passes through unchanged.
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `text` | `str` | — | Markdown source. |
+| `color` | `Color \| None` | `None` | If supplied, its `enabled` flag drives ANSI emission unless `enabled=` overrides. |
+| `enabled` | `bool \| None` | `None` | Force ANSI on/off. `None` defers to `color.enabled` if set, else defaults to `True`. |
+
+Does **not** read environment variables — the caller decides via
+`color` / `enabled`.
+
+```python
+from codechu_cli import Color, render_markdown
+c = Color(sys.stderr)
+print(render_markdown("# Help\n\nRun `disk-cleaner --scan`.", color=c))
+```
+
+---
+
 ## Module attribute: `__version__`
 
-`str` — the package's semver (`"0.2.0"` at time of writing).
+`str` — the package's semver (`"0.3.0"` at time of writing).

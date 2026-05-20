@@ -250,3 +250,87 @@ default `"modern"`).
 Both registries are part of the public API — your registered names
 are usable everywhere built-in names are (`ProgressBar.style()`,
 `Spinner(style=…)`, `--style` CLI flags, etc.).
+
+---
+
+## 9. Render scan results as a colored Table
+
+`Table` widths ignore ANSI escapes, so caller-supplied color callbacks
+never break alignment.
+
+```python
+import sys
+from codechu_cli import Color, Table, resolve_format
+
+c = Color(sys.stdout)
+fmt = resolve_format(sys.stdout)   # "table" on TTY, "json" when piped
+
+if fmt == "table":
+    t = Table(["File", "Size", "Risk"])
+    t.add_row(["~/.cache/pip",  "2.4 GB", "low"])
+    t.add_row(["/var/log/syslog", "812 MB", "medium"])
+    t.add_row(["~/Downloads",   "14.0 GB", "high"])
+    t.align(1, "right")
+    t.color_col(2, lambda v: {"low": c.low, "medium": c.medium, "high": c.high}[v](v))
+    print(t.style("box"))
+else:
+    # caller emits JSON / NDJSON instead
+    ...
+```
+
+Use `style("github")` to render the same table as a Markdown table for
+copy-pasting into a PR description.
+
+---
+
+## 10. Show errors in a bordered box
+
+`box()` is good for diagnostics that must stand out from a stream of
+log lines.
+
+```python
+import sys
+from codechu_cli import Color, box
+
+c = Color(sys.stderr)
+
+msg = "\n".join([
+    c.high("Refusing destructive operation."),
+    "",
+    "Target path:  " + c.bold("/"),
+    "Reason:       cross-device + read-only mount",
+])
+print(box(msg, style="rounded", title="error", padding=1), file=sys.stderr)
+```
+
+Pair with `Color` so the body text is themed and `box()` only handles
+the border. Multi-line content is fine; `box()` aligns inner padding
+based on the longest line.
+
+---
+
+## 11. Format help text with Markdown
+
+For `--help` extras or `error` epilogues, write your copy in Markdown
+and render it through `render_markdown`. ANSI is emitted only when the
+provided `Color` says so — non-TTY runs stay clean.
+
+```python
+import sys
+from codechu_cli import Color, render_markdown
+
+c = Color(sys.stderr)
+help_text = """
+## Examples
+
+- Scan home: `disk-cleaner --scan ~`
+- Dry-run: `disk-cleaner --clean --dry-run`
+
+See **[the docs](https://codechu.dev/disk-cleaner)** for more.
+""".strip()
+
+print(render_markdown(help_text, color=c), file=sys.stderr)
+```
+
+When piping to `less -R` or a file, pass `enabled=False` (or rely on
+`Color`'s auto TTY detection) to get plain text.

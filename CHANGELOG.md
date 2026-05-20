@@ -4,6 +4,20 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-20
+
+### Added
+- `Table` — ASCII table widget with `plain` / `box` / `github` styles,
+  per-column alignment, caller-supplied color callbacks, and auto
+  widths that ignore ANSI escapes.
+- `box(text, *, style, title, padding)` — Unicode-bordered text box
+  (`single` / `double` / `rounded`) with optional inset title.
+- `render_markdown(text, *, color, enabled)` — minimal Markdown → ANSI
+  for help text and short docs (`# H1`, `## H2`, `**bold**`,
+  `*italic*`, `` `code` ``, `-` / `*` lists, `[text](url)`).
+
+## [0.2.0]
+
 ### Changed (breaking)
 - Explicit-config refactor: library code no longer reads environment
   variables implicitly. `capabilities()` (in both `emoji` and the
