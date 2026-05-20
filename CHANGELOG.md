@@ -4,6 +4,23 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-20
+
+### Changed
+- **Defork**: `ProgressBar` now uses `codechu_meter.RateEstimator` and
+  `codechu_fmt.format_duration` / `format_rate` directly. The inline
+  `_RateEstimator` / `_fmt_duration` / `_fmt_rate` helpers in
+  `progress/bar.py` are removed.
+- **Visible output for very long ETAs**: duration formatting now
+  promotes ≥3600 s to ``"1h Xm"`` (was ``"61m 40s"``). This is the
+  documented improvement of the consolidation; matches the rest of
+  the Codechu fmt family.
+
+### Dependencies
+- New required dependencies: ``codechu-fmt>=0.4,<0.5`` and
+  ``codechu-meter>=0.3,<0.4``. Both are pure-stdlib, no transitive
+  deps.
+
 ## [0.3.0] - 2026-05-20
 
 ### Added

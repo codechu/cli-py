@@ -4,59 +4,15 @@ from __future__ import annotations
 
 import sys
 import time
-from collections import deque
 from typing import IO
+
+from codechu_fmt import format_duration, format_rate
+from codechu_meter import RateEstimator
 
 from .._term import is_tty
 from .line import ProgressLine
 from .styles_bar import BAR_STYLES, DEFAULT_BAR_STYLE, SUBPIXEL
 from .styles_spinner import SPINNER_STYLES
-
-
-def _fmt_duration(secs: float) -> str:
-    """Compact duration: ``Xs`` under 60 s, ``Xm Ys`` otherwise."""
-    if secs < 0:
-        secs = 0.0
-    s = int(round(secs))
-    if s < 60:
-        return f"{s}s"
-    return f"{s // 60}m {s % 60}s"
-
-
-def _fmt_rate(rate: float, unit: str) -> str:
-    """Compact rate string like ``42 items/s``."""
-    if rate >= 100:
-        return f"{int(round(rate))} {unit}/s"
-    if rate >= 10:
-        return f"{rate:.1f} {unit}/s"
-    return f"{rate:.2f} {unit}/s"
-
-
-class _RateEstimator:
-    """Tiny windowed rate estimator (events per second)."""
-
-    def __init__(self, window_seconds: float = 1.0) -> None:
-        self._window = window_seconds
-        self._events: deque[tuple[float, float]] = deque()  # (ts, n)
-
-    def observe(self, n: float = 1) -> None:
-        now = time.monotonic()
-        self._events.append((now, float(n)))
-        cutoff = now - self._window
-        while self._events and self._events[0][0] < cutoff:
-            self._events.popleft()
-
-    def rate(self) -> float:
-        if not self._events:
-            return 0.0
-        now = time.monotonic()
-        cutoff = now - self._window
-        while self._events and self._events[0][0] < cutoff:
-            self._events.popleft()
-        if not self._events:
-            return 0.0
-        total = sum(n for _, n in self._events)
-        return total / self._window
 
 
 class ProgressBar:
@@ -114,7 +70,7 @@ class ProgressBar:
         self._indeterm_idx = 0
         self._t_start = time.monotonic()
         self._last_advance = time.monotonic()
-        self._rate = _RateEstimator(window_seconds=1.0)
+        self._rate = RateEstimator(window_seconds=1.0)
 
         # Lazy: line is constructed on first render so stream/enabled
         # changes via the builder are respected.
@@ -336,7 +292,7 @@ class ProgressBar:
             pct_str = str(int(round(ratio * 100)))
             if self.total > 0 and self.current > 0:
                 eta_s = elapsed * (self.total - self.current) / self.current
-                eta_str = _fmt_duration(max(0.0, eta_s))
+                eta_str = format_duration(max(0.0, eta_s), integer_seconds=True)
             else:
                 eta_str = "?"
             remaining_str = str(max(0, self.total - self.current))
@@ -347,7 +303,7 @@ class ProgressBar:
             pct_str = str(int(round(ratio * 100)))
             if self.total > 0 and self.current > 0:
                 eta_s = elapsed * (self.total - self.current) / self.current
-                eta_str = _fmt_duration(max(0.0, eta_s))
+                eta_str = format_duration(max(0.0, eta_s), integer_seconds=True)
             else:
                 eta_str = "?"
             remaining_str = str(max(0, self.total - self.current))
@@ -359,7 +315,12 @@ class ProgressBar:
         if self._indeterminate or elapsed < 0.5 or self._rate.rate() <= 0:
             rate_str = "?"
         else:
-            rate_str = _fmt_rate(self._rate.rate(), self._units or "items")
+            rate_str = format_rate(
+                self._rate.rate(),
+                unit=self._units or "items",
+                precision="auto",
+                bare_items=False,
+            )
 
         msg = self._template.format(
             bar=bar_str,
@@ -367,7 +328,7 @@ class ProgressBar:
             current=self.current,
             total=self.total,
             label=label,
-            elapsed=_fmt_duration(elapsed),
+            elapsed=format_duration(elapsed, integer_seconds=True),
             eta=eta_str,
             spinner=spinner_str,
             remaining=remaining_str,
