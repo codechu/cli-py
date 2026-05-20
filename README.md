@@ -1,13 +1,14 @@
-# codechu-cli
-
 ```text
-   ___          _           _
-  / __\___   __| | ___  ___| |__  _   _
- / /  / _ \ / _\` |/ _ \/ __| '_ \| | | |
-/ /__| (_) | (_| |  __/ (__| | | | |_| |
-\____/\___/ \__,_|\___|\___|_| |_|\__,_|
+   ┌─[ codechu-cli ]──────────────────────────────────┐
+   │ $ deploy --prod                                  │
+   │ ⠿ building ......... [██████████▌      ]  68%    │
+   │ ? continue? [Y/n] ▏                              │
+   └──────────────────────────────────────────────────┘
 ```
 
+> *Colors, progress bars, spinners, prompts — terminal UX in one import.*
+
+# codechu-cli
 
 Stdlib-only CLI primitives for Python — colors, progress bars, spinners,
 prompts, emoji helpers — with consistent UX across Codechu tools.
